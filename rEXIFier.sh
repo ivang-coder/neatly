@@ -4,6 +4,10 @@
 # Version: v1.0
 # Date: 2020/08/16
 
+# To Do
+# "Unverified" file deduplication
+# 
+
 # This script is used to sort media files (jpg, jpeg, mp4, mpg and mov ). 
 #  It uses EXIFTOOL to extract "SubSecCreateDate", "CreateDate" and 
 #  "Model" tags. If EXIF attempts fail, then less reliable file attributes get
