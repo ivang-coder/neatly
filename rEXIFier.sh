@@ -10,7 +10,7 @@
 
 # This script is used to sort media files (jpg, jpeg, mp4, mpg and mov ). 
 #  It uses EXIFTOOL to extract "SubSecCreateDate", "CreateDate" and 
-#  "Model" tags. If EXIF attempts fail, then less reliable file attributes get
+#  "Model" metadata. If EXIF attempts fail, then less reliable file attributes get
 #  extracted as the last resort. In case the file attribute 
 #  extaction fails, the source filename gets amended by adding
 #  "UNVERIFIED-" prefix
