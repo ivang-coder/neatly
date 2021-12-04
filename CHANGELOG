@@ -1,0 +1,7 @@
+#=======================================================================
+#   Changelog :
+#   20200520 v0.1: initial version with simple EXIF extraction
+#   20200607 v0.5: EXIF SubSecCreateDate and CreateDate extractions added
+#   20200723 v0.9: EXIF Model and File System ModifyTime extractions added
+#   20200816 v1.0: alpha-version of Minimal Viable Product with file duplication avoidance
+#=======================================================================
