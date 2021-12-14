@@ -6,7 +6,7 @@
 
 # To Do
 # "Unverified" file deduplication
-# duplicate file check in FileDuplicate folder
+# add proper LOG, DEBUG and DRYRUN processing
 # option to select YEAR/MONTH/DAY or YEAR/MONTH or YEAR
 # paths with "space" characters trigger issues
 
@@ -250,6 +250,13 @@ DigestComparison(){
 
 # FileNameIncrementer increments the SUBSECOND part to form a unique filename suffix
 FileNameIncrementer(){
+  # Resetting variables
+  FileNameToIncrement=""
+  FileNameToIncrementBasename=""
+  FileNameToIncrementFileName=""
+  FileNameToIncrementElement=""
+  IncrementedElement=""
+  FileNameIncrementerResult=""
   # Passing the last member with highest SUBSECOND number in the sorted array of filenames
   FileNameToIncrement=$1
   # Extracting file basename
@@ -263,6 +270,38 @@ FileNameIncrementer(){
   # Passing the incremented Element to FileNameIncrementerResult
   FileNameIncrementerResult=${IncrementedElement}
 }
+
+# FileNameDuplicateIncrementer increments the SUBSECOND part to form a unique filename suffix
+FileNameDuplicateIncrementer(){
+  # Resetting variables
+  FileNameDuplicateToIncrement=""
+  FileNameDuplicateToIncrementBasename=""
+  FileNameDuplicateToIncrementFileName=""
+  FileNameDuplicateToIncrementElement=""
+  DuplicateIncrementedElement=""
+  FileNameDuplicateIncrementerResult=""
+  # Passing the last member with highest DUP*** number in the sorted array of filenames
+  FileNameDuplicateToIncrement=$1
+  # Extracting file basename
+  FileNameDuplicateToIncrementBasename=$(basename ${FileNameDuplicateToIncrement})
+  # Extracting file name
+  FileNameDuplicateToIncrementFileName=${FileNameDuplicateToIncrementBasename%.*} 
+  # Extracting the Element, i.e. DUP*** part
+  FileNameDuplicateToIncrementElement=$(echo ${FileNameDuplicateToIncrementFileName} | awk -F "-" '{print $5}')
+  # Extracting the numerical part of Element, i.e. *** part
+  FileNameDuplicateToIncrementElement="${FileNameDuplicateToIncrementFileName: -3}"
+  # Checking if DUP*** is extracted
+  if [[ ! ${FileNameDuplicateToIncrementElement} ]]; then
+    # Changing the Element to DUP000 if nothing was extracted
+    DuplicateIncrementedElement="000"
+  else
+    # Incrementing the Element so that we can form a new File Name
+    printf -v DuplicateIncrementedElement %03d "$((10#$FileNameDuplicateToIncrementElement + 1))"
+  fi
+  # Passing the incremented Element to FileNameDuplicateIncrementerResult
+  FileNameDuplicateIncrementerResult=${DuplicateIncrementedElement}
+}
+
 
 # FileListToArray converts string to array and outputs the array, count of elements and the last element
 FileListToArray(){
@@ -290,6 +329,9 @@ FileListToArray(){
 }
 
 DuplicateSearch(){
+  # Resetting variables
+  DuplicateSearchResult=""
+  # Passing parameters to variables
   PathToSearch="$1"
   FileNameToSearch="$2"
   FileExtensionToSearch="$3"
@@ -682,7 +724,7 @@ for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
         fi
       fi
     fi
-    # Add UNVERIFIED without changing the rest of filename if tag/attribute extraction failed.
+    # Append UNVERIFIED to the filename if tag/attribute extraction failed.
     if [[ ${UNVERIFIED} -eq 1 ]] ; then
       UNVERIFIED="UNVERIFIED"
       FormatedFileName=${UNVERIFIED}-${WIPFileBasename}
@@ -746,7 +788,7 @@ for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
             IncrementedSubsecond=${FileNameIncrementerResult}
             # Re-forming the File Name with the incremented SUBSECOND
             FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${IncrementedSubsecond}.${NormalisedFileExtension}
-            # Moving the file to the Desination File Path
+            # Attempting to move the file to the Desination File Path
             if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${YEAR}/${MONTH}/${DAY}/${FormatedFileName} ) ; then
               printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${YEAR}/${MONTH}/${DAY}/${FormatedFileName} FAILED\n"
             else
@@ -761,6 +803,8 @@ for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
               printf "Error! Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
               exit
             else
+              # Re-forming the File Name by appending DUP000
+              FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP000.${NormalisedFileExtension}
               # Checking if Destination FileName exists
               if [[ ! -f ${DestinationPath}/${FileNameDuplicates}/${WIPDirectoryName}/${FormatedFileName} ]] ; then
                 # Attempting to move the file to the FileNameDuplicates directory for review
@@ -772,21 +816,23 @@ for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
               # If Destination FileName does exist, get all the names in the Destination Directory 
               # matching the shortened file basename and process them to avoid duplicates
               else
-#                # Calling DuplicateSearch when a duplicate is identified
-#                DuplicateSearch ${DestinationPath}/${FileNameDuplicates}/${WIPDirectoryName} ${FormatedShortenFileName} ${NormalisedFileExtension}
-#                # Returning value from DuplicateSearch as DuplicateSearchResult and passing it to FileListSorter
-#                FileListSorter $DuplicateSearchResult
-#                # Returning value from FileListSorter as FileListSorterResult and passing it to FileListToArray function to convert string to array
-#                FileListToArray "${FileListSorterResult}"
-#                # Calling FileNameIncrementer against the Element of matched filenames to change the filename suffix
-#                FileNameIncrementer $FileListToArrayLastElement
+                
+                FormatedShortenDuplicateFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-
+                # Calling DuplicateSearch when a duplicate is identified
+                DuplicateSearch ${DestinationPath}/${FileNameDuplicates}/${WIPDirectoryName} ${FormatedShortenDuplicateFileName} ${NormalisedFileExtension}
+                # Returning value from DuplicateSearch as DuplicateSearchResult and passing it to FileListSorter
+                FileListSorter $DuplicateSearchResult
+                # Returning value from FileListSorter as FileListSorterResult and passing it to FileListToArray function to convert string to array
+                FileListToArray "${FileListSorterResult}"
+                # Calling FileNameDuplicateIncrementer against the Element of matched filenames to change the filename suffix
+                FileNameDuplicateIncrementer $FileListToArrayLastElement
 #                printf "\n{FileListToArrayLastElement} is ${FileListToArrayLastElement}\n"
-#                # Returning the incremented element from FileNameIncrementer function
-#                FileNameIncrementedElement=${FileNameIncrementerResult}
+                # Returning the incremented element from FileNameIncrementer function
+                FileNameIncrementedElement=${FileNameDuplicateIncrementerResult}
 #                printf "\n{FileNameIncrementerResult} is ${FileNameIncrementerResult}\n"
                 # Re-forming the File Name with the incremented Element
-                FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${RANDOM}.${NormalisedFileExtension}
-#                #FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-${FileNameIncrementedElement}.${NormalisedFileExtension}
+                #FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${RANDOM}.${NormalisedFileExtension}
+                FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${FileNameIncrementedElement}.${NormalisedFileExtension}
                 # Moving the file to the FileNameDuplicates directory for review
                 if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${FileNameDuplicates}/${WIPDirectoryName}/${FormatedFileName} ) ; then
                   printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${WIPDirectoryName}/${FormatedFileName} FAILED\n"
@@ -796,26 +842,6 @@ for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
               fi
             fi              
           fi
-          # Processing the Destination Directory if the message digest match was found more than once, it means the Destination Directory contains 
-          # files with the same content and difference file names, i.e. by-content duplicates
-#          FileContentDuplicates="FileContentDuplicates"
-#          if [[ CheckSumMatchCount -gt 1 ]] ; then
-#            if ( ! mkdir -p ${DestinationPath}/${FileContentDuplicates}/${WIPDirectoryName} >/dev/null 2>&1 ) ; then
-#              printf "Error! Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
-#              exit
-#            else
-#              # Since the array of duplicate file paths is already sorted, moving all but the first duplicate files 
-#              # from Destination Directory to the FileContentDuplicates directory for review.
-#              # That first file is treated as the original file
-#              for DestinationDuplicateFile in ${DestinationDuplicateFiles[@]:1} ; do 
-#                if ( ! mv ${DestinationDuplicateFile} "${DestinationPath}/${FileContentDuplicates}/${WIPDirectoryName}/" ) ; then
-#                  printf "Moving ${DestinationDuplicateFile} to '${DestinationPath}/${FileContentDuplicates}/${WIPDirectoryName}/' FAILED\n"
-#                else
-#                  printf "Moving ${DestinationDuplicateFile} to '${DestinationPath}/${FileContentDuplicates}/${WIPDirectoryName}/' ${NOTE} SUCCESSFUL\n"
-#                fi
-#              done
-#            fi              
-#          fi
         fi
       fi
     else
