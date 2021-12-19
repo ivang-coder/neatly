@@ -1,13 +1,11 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.0
-# Date: 2020/08/16
+# Version: v1.2
+# Date: 2021-12-18
 
 # To Do
 # "Unverified" file deduplication
-# add proper LOG, DEBUG and DRYRUN processing
-# option to select YEAR/MONTH/DAY or YEAR/MONTH or YEAR
 # paths with "space" characters trigger issues
 
 # Knowledge Base:
