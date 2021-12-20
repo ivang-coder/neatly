@@ -6,4 +6,5 @@
 #   20200816 v1.0: alpha-version of Minimal Viable Product with file duplication avoidance
 #   20211211 v1.1: beta-version with option to select YEAR/MONTH/DAY or YEAR/MONTH or YEAR destination folder structure
 #   20211218 v1.2: added logging
+#   20211219 v1.3: "Unverified" (based on file system attributes) file duplication avoidance added
 #=======================================================================

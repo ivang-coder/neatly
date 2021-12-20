@@ -1,11 +1,10 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.2
-# Date: 2021-12-18
+# Version: v1.3
+# Date: 2021-12-19
 
 # To Do
-# "Unverified" file deduplication
 # paths with "space" characters trigger issues
 
 # Knowledge Base:
@@ -38,7 +37,7 @@ UsageTip="Usage: '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--
 SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n Example: '/home/username/pictures/'\n"
 DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively use '.' for current directory.\n Example: '/mystorage/sorted-pictures/'\n"
 ExtensionTip="Extension case switch options: \n--ExT=unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n--EXT=uppercase, i.e. jpeg > JPEG \n--ext=lowercase (recommended), i.e. JPEG > jpeg\n"
-FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\nIf enabled with '--FSAttribute', it can cause conflicts and affect file sorting. '--NoFSAttribute' is the recommended option.\n"
+FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\nIf enabled with '--FSAttribute', it can cause conflicts and affect file sorting.\n'--NoFSAttribute' (default) is the recommended option.\n"
 
 # End of Forming help menu options
 
@@ -219,7 +218,7 @@ FileNameIncrementer(){
   FileNameIncrementerResult=${IncrementedElement}
 }
 
-# FileNameDuplicateIncrementer increments the SUBSECOND part to form a unique filename suffix
+# FileNameDuplicateIncrementer increments the DUP*** part to form a unique filename suffix
 FileNameDuplicateIncrementer(){
   # Resetting variables
   FileNameDuplicateToIncrement=""
@@ -240,7 +239,7 @@ FileNameDuplicateIncrementer(){
   FileNameDuplicateToIncrementElement="${FileNameDuplicateToIncrementFileName: -3}"
   # Checking if DUP*** is extracted
   if [[ ! ${FileNameDuplicateToIncrementElement} ]]; then
-    # Changing the Element to DUP000 if nothing was extracted
+    # Changing the Element to 000 if nothing was extracted
     DuplicateIncrementedElement="000"
   else
     # Incrementing the Element so that we can form a new File Name
@@ -248,6 +247,37 @@ FileNameDuplicateIncrementer(){
   fi
   # Passing the incremented Element to FileNameDuplicateIncrementerResult
   FileNameDuplicateIncrementerResult=${DuplicateIncrementedElement}
+}
+
+# FileNameUnverifiedIncrementer increments the UVRFD*** part to form a unique filename suffix
+FileNameUnverifiedIncrementer(){
+  # Resetting variables
+  FileNameUnverifiedToIncrement=""
+  FileNameUnverifiedToIncrementBasename=""
+  FileNameUnverifiedToIncrementFileName=""
+  FileNameUnverifiedToIncrementElement=""
+  UnverifiedIncrementedElement=""
+  FileNameUnverifiedIncrementerResult=""
+  # Passing the last member with highest UVRFD*** number in the sorted array of filenames
+  FileNameUnverifiedToIncrement=$1
+  # Extracting file basename
+  FileNameUnverifiedToIncrementBasename=$(basename ${FileNameUnverifiedToIncrement})
+  # Extracting file name
+  FileNameUnverifiedToIncrementFileName=${FileNameUnverifiedToIncrementBasename%.*} 
+  # Extracting the Element, i.e. UVRFD*** part
+  FileNameUnverifiedToIncrementElement=$(echo ${FileNameUnverifiedToIncrementFileName} | awk -F "-" '{print $NF}')
+  # Extracting the numerical part of Element, i.e. *** part
+  FileNameUnverifiedToIncrementElement="${FileNameUnverifiedToIncrementFileName: -3}"
+  # Checking if DUP*** is extracted
+  if [[ ! ${FileNameUnverifiedToIncrementElement} ]]; then
+    # Changing the Element to 000 if nothing was extracted
+    UnverifiedIncrementedElement="000"
+  else
+    # Incrementing the Element so that we can form a new File Name
+    printf -v UnverifiedIncrementedElement %03d "$((10#$FileNameUnverifiedToIncrementElement + 1))"
+  fi
+  # Passing the incremented Element to FileNameUnverifiedIncrementerResult
+  FileNameUnverifiedIncrementerResult=${UnverifiedIncrementedElement}
 }
 
 
@@ -462,7 +492,7 @@ case "${ExtensionCaseSwitch}" in
     ;;
 esac
 LogOutput+="    File attribute extraction: "
-if [ ${FileSystemAttributeProcessingFlag} -eq 1 ]; then 
+if [[ ${FileSystemAttributeProcessingFlag} -eq 1 ]]; then 
   LogOutput+="ENABLED\n" 
 else 
   LogOutput+="DISABLED\n";
@@ -494,6 +524,8 @@ WIPDirectoryName="WIP-${WIPDirectoryDate}"
 WIPDirectoryPath=${SourcePath}/${WIPDirectoryName}
 # Forming directory name for file duplicates
 FileNameDuplicates="Duplicates"
+# Forming directory name for unverified files
+UnverifiedFiles="Unverified"
 
 # Prerequisite check for r+w permissions
 # Checking if the source directory is writable by creating Work-In-Progress folder, piping errors to NULL
@@ -504,6 +536,11 @@ fi
 # Cheking if the destination directory is writable by creating Duplicates folder, piping errors to NULL
 if ( ! mkdir -p ${DestinationPath}/${FileNameDuplicates} >/dev/null 2>&1 ) ; then
   printf "Prerequisite Critical Error! Could not write ${FileNameDuplicates}. Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
+  exit
+fi
+# Cheking if the destination directory is writable by creating UnverifiedFiles folder, piping errors to NULL
+if ( ! mkdir -p ${DestinationPath}/${UnverifiedFiles} >/dev/null 2>&1 ) ; then
+  printf "Prerequisite Critical Error! Could not write ${UnverifiedFiles}. Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
   exit
 fi
 # Cheking if the destination directory is writable by creating Log file, piping errors to NULL
@@ -677,7 +714,7 @@ for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
         fi
       else
         # Proceed to file attribute extraction if it is enabled
-        if [[ ${FileSystemAttributeProcessingFlag} ]] ; then
+        if [[ ${FileSystemAttributeProcessingFlag} -eq 1 ]] ; then
           # If EXIF tag extracion failed, the last resort is file system file attributes
           #
           # Attempt to find a File System Modify Time mtime attribute from the file.
@@ -697,16 +734,16 @@ for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
             MODEL="CAMERA" 
           fi
         # Proceed with "unverified" file name forming flag if file attribute extraction is disabled
-        # or all previous attempts failed
+        # or all previous data extraction methods failed
         else
           UNVERIFIED=1
         fi
       fi
     fi
+
     # Append UNVERIFIED to the filename if tag/attribute extraction failed.
     if [[ ${UNVERIFIED} -eq 1 ]] ; then
-      UNVERIFIED="UNVERIFIED"
-      FormatedFileName=${UNVERIFIED}-${WIPFileBasename}
+      FormatedFileName=${WIPFileName}-UVRFD000.${WIPFileExtension}
     # Modify filename as per format if tag/attribute extraction is successful
     else
       FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}.${NormalisedFileExtension}
@@ -728,130 +765,212 @@ for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
         DestinationStructure=${YEAR}
         ;;
     esac
-    # Checking if the destination is writable by creating Desination File Path, piping errors to NULL
-    if ( ! mkdir -p ${DestinationPath}/${DestinationStructure} >/dev/null 2>&1 ) ; then
-      printf "Post-Prerequisite Critical Error! Could not write ${DestinationStructure}. Directory ${DestinationPath} does not appear to be writable.\n"
-      exit
-    else
+
+    if [[ ${UNVERIFIED} -eq 1 ]] ; then
+      # Re-forming the File Name by appending UVRFD000 was done before
+      # Just a reminder what Formated File Name is FormatedFileName=${WIPFileName}-UVRFD000.${WIPFileExtension}
+      #
       # Checking if Destination FileName exists
       # "-e file" returns true if file exists
       # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
-      if [[ ! -f ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ]] ; then        
-        # Moving the file to the Desination File Path
-        if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ) ; then
-          printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
+      if [[ ! -f ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} ]] ; then
+        # Attempting to move the file to the UnverifiedFiles directory for review
+        if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} ) ; then
+          printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} FAILED\n"
           printf "########\n"
-          LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
+          LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} FAILED\n"
           LogOutput+="########\n"
         else
-          printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ${NOTE} SUCCESSFUL\n"
+          printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} SUCCESSFUL\n"
           printf "########\n"
-          LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ${NOTE} SUCCESSFUL\n"
+          LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} SUCCESSFUL\n"
           LogOutput+="########\n"
         fi
       # If Destination FileName does exist, get all the names in the Destination Directory 
       # matching the shortened file basename and process them to avoid duplicates
       else
+        FormatedShortenUnverifiedFileName=${WIPFileName}-
         # Calling DuplicateSearch when a duplicate is identified
-        LogOutput+="Calling DuplicateSearch with FormatedShortenFileName: ${FormatedShortenFileName}\n"
-        DuplicateSearch ${DestinationPath}/${DestinationStructure} ${FormatedShortenFileName} ${NormalisedFileExtension}
+        DuplicateSearch ${DestinationPath}/${UnverifiedFiles} ${FormatedShortenUnverifiedFileName} ${NormalisedFileExtension}
         # Returning value from DuplicateSearch as DuplicateSearchResult and passing it to FileListSorter
-        LogOutput+="Calling FileListSorter function against {DuplicateSearchResult} ${DuplicateSearchResult}\n"
-        FileListSorter ${DuplicateSearchResult}
+        FileListSorter $DuplicateSearchResult
         # Returning value from FileListSorter as FileListSorterResult and passing it to FileListToArray function to convert string to array
-        LogOutput+="Calling FileListToArray function against {FileListSorterResult} ${FileListSorterResult}\n"
         FileListToArray "${FileListSorterResult}"
-        LogOutput+="Receiving FileListToArray function results FileListToArrayResult ${FileListToArrayResult}\n"
-        # Defining/resetting checksum match variable for counting file duplicates
-        CheckSumMatchCount=0
-        # Calling DigestComparison to compare the file's message digest with all matched files in FileListToArrayResult
-        LogOutput+="Calling DigestComparison function against {WIPSortedFileAbsolutePath} ${WIPSortedFileAbsolutePath} and {FileListToArrayResult} ${FileListToArrayResult}\n"
-        DigestComparison ${WIPSortedFileAbsolutePath} ${FileListToArrayResult}
-        # Returning checksum match count from DigestComparison function
-        LogOutput+="Calling CheckSumMatchCount function against {DigestComparisonCheckSumMatchCount} ${DigestComparisonCheckSumMatchCount}\n"
-        CheckSumMatchCount=${DigestComparisonCheckSumMatchCount}
-        # Returning duplicate file list from DigestComparison function
-        DestinationDuplicateFiles=${DigestComparisonFileList}
-        # If message digest match was not found, it means the Destination Directory contains 
-        # files with the same file name and difference content, i.e. by-filename duplicates
-        # Example: pictures created simultaneously by two cameras of the same Make/Model
-        # Changing the SUBSECOND part by 000001 increment to make the filename unique
-        if [[ CheckSumMatchCount -eq 0 ]] ; then
-          # Calling FileNameIncrementer against the last member with highest SUBSECOND number in the sorted array of matched filenames to change the filename suffix
-          FileNameIncrementer ${FileListToArrayLastElement}
-          # Returning the incremented element from FileNameIncrementer function
-          IncrementedSubsecond=${FileNameIncrementerResult}
-          # Re-forming the File Name with the incremented SUBSECOND
-          FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${IncrementedSubsecond}.${NormalisedFileExtension}
-          # Attempting to move the file to the Desination File Path
+        # Calling FileNameUnverifiedIncrementer against the Element of matched filenames to change the filename suffix
+        FileNameUnverifiedIncrementer $FileListToArrayLastElement
+        # Returning the incremented element from FileNameUnverifiedIncrementer function
+        FileNameIncrementedElement=${FileNameUnverifiedIncrementerResult}
+        # Re-forming the File Name with the incremented Element
+        FormatedFileName=${WIPFileName}-UVRFD${FileNameIncrementedElement}.${NormalisedFileExtension}
+        # Checking if Destination FileName exists
+        # "-e file" returns true if file exists
+        # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
+        if [[ ! -f ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} ]] ; then
+          # Moving the file to the UnverifiedFiles directory for review
+          if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} ) ; then
+            printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} FAILED\n"
+            printf "########\n"
+            LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} FAILED\n"
+            LogOutput+="########\n"
+          else
+            printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} SUCCESSFUL\n"
+            printf "########\n"
+            LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} SUCCESSFUL\n"
+            LogOutput+="########\n"
+          fi
+        else
+          printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} is stopped to avoid overriding the existing file. Check duplicate avoidance functions\n"
+          printf "########\n"
+          LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName}  is stopped to avoid overriding the existing file. Check duplicate avoidance functions\n"
+          LogOutput+="########\n"
+        fi
+      fi
+    else
+      # Checking if the destination is writable by creating Desination File Path, piping errors to NULL
+      if ( ! mkdir -p ${DestinationPath}/${DestinationStructure} >/dev/null 2>&1 ) ; then
+        printf "Post-Prerequisite Critical Error! Could not write ${DestinationStructure}. Directory ${DestinationPath} does not appear to be writable.\n"
+        exit
+      else
+        # Checking if Destination FileName exists
+        # "-e file" returns true if file exists
+        # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
+        if [[ ! -f ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ]] ; then        
+          # Moving the file to the Desination File Path
           if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ) ; then
             printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
             printf "########\n"
             LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
             LogOutput+="########\n"
           else
-            printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ${NOTE} SUCCESSFUL\n"
+            printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} SUCCESSFUL\n"
             printf "########\n"
-            LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ${NOTE} SUCCESSFUL\n"
+            LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} SUCCESSFUL\n"
             LogOutput+="########\n"
           fi
-        fi
-        # Processing the WIP file if message digest match was found
-        # Cheking if the destination directory is writable by creating Duplicates folder, piping errors to NULL
-        if [[ CheckSumMatchCount -ge 1 ]] ; then
-          if ( ! mkdir -p ${DestinationPath}/${FileNameDuplicates} >/dev/null 2>&1 ) ; then
-            printf "Post-Prerequisite Critical Error! Could not write ${FileNameDuplicates}. Directory ${DestinationPath} does not appear to be writable.\n"
-            exit
-          else
-            # Re-forming the File Name by appending DUP000
-            FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP000.${NormalisedFileExtension}
+        # If Destination FileName does exist, get all the names in the Destination Directory 
+        # matching the shortened file basename and process them to avoid duplicates
+        else
+          # Calling DuplicateSearch when a duplicate is identified
+          LogOutput+="Calling DuplicateSearch with FormatedShortenFileName: ${FormatedShortenFileName}\n"
+          DuplicateSearch ${DestinationPath}/${DestinationStructure} ${FormatedShortenFileName} ${NormalisedFileExtension}
+          # Returning value from DuplicateSearch as DuplicateSearchResult and passing it to FileListSorter
+          LogOutput+="Calling FileListSorter function against {DuplicateSearchResult} ${DuplicateSearchResult}\n"
+          FileListSorter ${DuplicateSearchResult}
+          # Returning value from FileListSorter as FileListSorterResult and passing it to FileListToArray function to convert string to array
+          LogOutput+="Calling FileListToArray function against {FileListSorterResult} ${FileListSorterResult}\n"
+          FileListToArray "${FileListSorterResult}"
+          LogOutput+="Receiving FileListToArray function results FileListToArrayResult ${FileListToArrayResult}\n"
+          # Defining/resetting checksum match variable for counting file duplicates
+          CheckSumMatchCount=0
+          # Calling DigestComparison to compare the file's message digest with all matched files in FileListToArrayResult
+          LogOutput+="Calling DigestComparison function against {WIPSortedFileAbsolutePath} ${WIPSortedFileAbsolutePath} and {FileListToArrayResult} ${FileListToArrayResult}\n"
+          DigestComparison ${WIPSortedFileAbsolutePath} ${FileListToArrayResult}
+          # Returning checksum match count from DigestComparison function
+          LogOutput+="Calling CheckSumMatchCount function against {DigestComparisonCheckSumMatchCount} ${DigestComparisonCheckSumMatchCount}\n"
+          CheckSumMatchCount=${DigestComparisonCheckSumMatchCount}
+          # Returning duplicate file list from DigestComparison function
+          DestinationDuplicateFiles=${DigestComparisonFileList}
+          # If message digest match was not found, it means the Destination Directory contains 
+          # files with the same file name and difference content, i.e. by-filename duplicates
+          # Example: pictures created simultaneously by two cameras of the same Make/Model
+          # Changing the SUBSECOND part by 000001 increment to make the filename unique
+          if [[ CheckSumMatchCount -eq 0 ]] ; then
+            # Calling FileNameIncrementer against the last member with highest SUBSECOND number in the sorted array of matched filenames to change the filename suffix
+            FileNameIncrementer ${FileListToArrayLastElement}
+            # Returning the incremented element from FileNameIncrementer function
+            IncrementedSubsecond=${FileNameIncrementerResult}
+            # Re-forming the File Name with the incremented SUBSECOND
+            FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${IncrementedSubsecond}.${NormalisedFileExtension}
             # Checking if Destination FileName exists
             # "-e file" returns true if file exists
             # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
-            if [[ ! -f ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ]] ; then
-              # Attempting to move the file to the FileNameDuplicates directory for review
-              if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ) ; then
-                printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+            if [[ ! -f ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ]] ; then
+              # Attempting to move the file to the Desination File Path
+              if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${DestinationStructure}/${FormatedFileName} ) ; then
+                printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
                 printf "########\n"
-                LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+                LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
                 LogOutput+="########\n"
               else
-                printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ${NOTE} SUCCESSFUL\n"
+                printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} SUCCESSFUL\n"
                 printf "########\n"
-                LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ${NOTE} SUCCESSFUL\n"
+                LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} SUCCESSFUL\n"
                 LogOutput+="########\n"
               fi
-            # If Destination FileName does exist, get all the names in the Destination Directory 
-            # matching the shortened file basename and process them to avoid duplicates
             else
-              FormatedShortenDuplicateFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-
-              # Calling DuplicateSearch when a duplicate is identified
-              DuplicateSearch ${DestinationPath}/${FileNameDuplicates} ${FormatedShortenDuplicateFileName} ${NormalisedFileExtension}
-              # Returning value from DuplicateSearch as DuplicateSearchResult and passing it to FileListSorter
-              FileListSorter $DuplicateSearchResult
-              # Returning value from FileListSorter as FileListSorterResult and passing it to FileListToArray function to convert string to array
-              FileListToArray "${FileListSorterResult}"
-              # Calling FileNameDuplicateIncrementer against the Element of matched filenames to change the filename suffix
-              FileNameDuplicateIncrementer $FileListToArrayLastElement
-              # Returning the incremented element from FileNameIncrementer function
-              FileNameIncrementedElement=${FileNameDuplicateIncrementerResult}
-              # Re-forming the File Name with the incremented Element
-              #FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${RANDOM}.${NormalisedFileExtension}
-              FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${FileNameIncrementedElement}.${NormalisedFileExtension}
-              # Moving the file to the FileNameDuplicates directory for review
-              if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ) ; then
-                printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
-                printf "########\n"
-                LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
-                LogOutput+="########\n"
-              else
-                printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ${NOTE} SUCCESSFUL\n"
-                printf "########\n"
-                LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ${NOTE} SUCCESSFUL\n"
-                LogOutput+="########\n"
-              fi
+              printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} is stopped to avoid overriding the existing file. Check duplicate avoidance functions\n"
+              printf "########\n"
+              LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName}  is stopped to avoid overriding the existing file. Check duplicate avoidance functions\n"
+              LogOutput+="########\n"
             fi
-          fi              
+          fi
+          # Processing the WIP file if message digest match was found
+          # Cheking if the destination directory is writable by creating Duplicates folder, piping errors to NULL
+          if [[ CheckSumMatchCount -ge 1 ]] ; then
+            if ( ! mkdir -p ${DestinationPath}/${FileNameDuplicates} >/dev/null 2>&1 ) ; then
+              printf "Post-Prerequisite Critical Error! Could not write ${FileNameDuplicates}. Directory ${DestinationPath} does not appear to be writable.\n"
+              exit
+            else
+              # Re-forming the File Name by appending DUP000
+              FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP000.${NormalisedFileExtension}
+              # Checking if Destination FileName exists
+              # "-e file" returns true if file exists
+              # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
+              if [[ ! -f ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ]] ; then
+                # Attempting to move the file to the FileNameDuplicates directory for review
+                if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ) ; then
+                  printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+                  printf "########\n"
+                  LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+                  LogOutput+="########\n"
+                else
+                  printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} SUCCESSFUL\n"
+                  printf "########\n"
+                  LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} SUCCESSFUL\n"
+                  LogOutput+="########\n"
+                fi
+              # If Destination FileName does exist, get all the names in the Destination Directory 
+              # matching the shortened file basename and process them to avoid duplicates
+              else
+                FormatedShortenDuplicateFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-
+                # Calling DuplicateSearch when a duplicate is identified
+                DuplicateSearch ${DestinationPath}/${FileNameDuplicates} ${FormatedShortenDuplicateFileName} ${NormalisedFileExtension}
+                # Returning value from DuplicateSearch as DuplicateSearchResult and passing it to FileListSorter
+                FileListSorter $DuplicateSearchResult
+                # Returning value from FileListSorter as FileListSorterResult and passing it to FileListToArray function to convert string to array
+                FileListToArray "${FileListSorterResult}"
+                # Calling FileNameDuplicateIncrementer against the Element of matched filenames to change the filename suffix
+                FileNameDuplicateIncrementer $FileListToArrayLastElement
+                # Returning the incremented element from FileNameIncrementer function
+                FileNameIncrementedElement=${FileNameDuplicateIncrementerResult}
+                # Re-forming the File Name with the incremented Element
+                #FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${RANDOM}.${NormalisedFileExtension}
+                FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${FileNameIncrementedElement}.${NormalisedFileExtension}
+                # Checking if Destination FileName exists
+                # "-e file" returns true if file exists
+                # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
+                if [[ ! -f ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ]] ; then
+                  # Moving the file to the FileNameDuplicates directory for review
+                  if ( ! mv ${WIPSortedFileAbsolutePath} ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} ) ; then
+                    printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+                    printf "########\n"
+                    LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+                    LogOutput+="########\n"
+                  else
+                    printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} SUCCESSFUL\n"
+                    printf "########\n"
+                    LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} SUCCESSFUL\n"
+                    LogOutput+="########\n"
+                  fi
+                else
+                  printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} is stopped to avoid overriding the existing file. Check duplicate avoidance functions\n"
+                  printf "########\n"
+                  LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName}  is stopped to avoid overriding the existing file. Check duplicate avoidance functions\n"
+                  LogOutput+="########\n"
+                fi
+              fi
+            fi              
+          fi
         fi
       fi
     fi
