@@ -7,4 +7,5 @@
 #   20211211 v1.1: beta-version with option to select YEAR/MONTH/DAY or YEAR/MONTH or YEAR destination folder structure
 #   20211218 v1.2: added logging
 #   20211219 v1.3: "Unverified" (based on file system attributes) file duplication avoidance added
+#   20211221 v1.4: paths with whitespace and other special characters now supported
 #=======================================================================
