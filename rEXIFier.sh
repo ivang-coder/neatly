@@ -10,6 +10,8 @@
 #=======================================================================
 # Key variables and Default parameters
 #=======================================================================
+# Getting the name of script, <name>.<ext>
+InstanceName="$(basename "${0}")"
 # Setting Internal Field Separator (IFS) to new-line character to process filenames with spaces and other special characters
 IFS=$'\n'
 # Setting extension case switch to "ext" with ExtensionCaseSwitch, i.e. changing file extension case to lowercase
@@ -30,10 +32,10 @@ LogOutput+="${LogDate}\n"
 #=======================================================================
 # Help options
 #=======================================================================
-HelpTip="Help: for more parameters use '/bin/bash rEXIFier.sh <-h|--help>'\n"
-UsageTip="Usage: '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute>\n"
+HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help>'\n"
+UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute>\n"
 SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n Example: '/home/username/pictures/'\n"
-DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively use '.' for current directory.\n Example: '/mystorage/sorted-pictures/'\n"
+DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n Example: '/mystorage/sorted-pictures/'\n"
 ExtensionTip="Extension case switch options: \n--ExT=unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n--EXT=uppercase, i.e. jpeg > JPEG \n--ext=lowercase (recommended), i.e. JPEG > jpeg\n"
 FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\nIf enabled with '--FSAttribute', it can cause conflicts and affect file sorting.\n'--NoFSAttribute' (default) is the recommended option.\n"
 
@@ -330,7 +332,6 @@ LogDumper(){
 # Prerequisite Checks begins
 #
 # Checking for absence of other running rEXIFier instances
-InstanceName="$(basename "${0}")" # Getting the name of script, <name>.<ext>
 InstanceNameBase="${InstanceName%.*}" # Stripping out the extension leaving just <name>
 # Excluding the "grep" from the output and counting the number of lines
 InstanceCount="$(ps -ef | grep "${InstanceNameBase}" | grep -v grep | wc -l)"
