@@ -1,37 +1,51 @@
 # rEXIFier Readme
-rEXIFier is a Shell-written EXIF-based media file processor with sort and deduplication features
+rEXIFier is a Shell-written EXIF-based media file processor with sort and deduplication features.
 
-The script processes media files (i.e. jpg, jpeg, mp4, mpg and mov) and it uses EXIFTOOL to extract "SubSecCreateDate", "CreateDate" and "Model" metadata. Depending on the selected options, the processed files are moved to "Destination" with a chosen directory sturucture.
+## Overview
+The script processes media files (i.e. jpg, jpeg, mp4, mpg and mov) and it uses EXIFTOOL to extract "SubSecCreateDate", "CreateDate" and "Model" metadata. Depending on the selected options, the processed files are moved/copied to "Destination" location with a chosen directory sturucture.
 
-If EXIF attempts fail, then the less reliable file attributes get extracted. 
-In case the file attribute extaction fails, the source filename gets amended by adding 'unverified' suffix in "UVRFDXXX" format, i.e. my-picture-UVRFD000.jpg. The unverified files are placed in "Unverified" folder within "Destination" path, i.e. /my-destination/Unverified/my-picture-UVRFD000.jpg
+If EXIF attempts fail to read metadata, then the less reliable file attributes get extracted by swithing on the appropriate option.
+
+In case file attribute extaction fails, the source filename gets amended by adding 'unverified' suffix in **"UVRFDXXX"** format, i.e. my-picture-UVRFD000.jpg.  
+The unverified files are placed in "Unverified" folder within "Destination" path, i.e. ```/my-destination/Unverified/my-picture-UVRFD000.jpg```
+
+## Filename format
+Filename format depends on the chosen folder structure.  
+&nbsp;&nbsp;--YMD = /YEAR/MONTH/DAY, i.e. /2021/05/10/picture.jpg  
+&nbsp;&nbsp;--YM = /YEAR/MONTH, i.e. /2021/05/picture.jpg  
+&nbsp;&nbsp;--Y = /YEAR, i.e. /2021/picture.jpg
+
+The expected filename format: **MODEL-DATE-SECONDS-SUBSECONDS.EXTENSION**  
+```Example: ONEPLUSA5000-20200613-125351-184775.jpg```
+
+In case the files are produced by a camera that does not create "SubSecCreateDate" field in metadata, the expected filename format: **MODEL-DATE-SECONDS-000000.EXTENSION**  
+```Example: E6533-20211205-001132-000000.jpg```
 
 ## Prerequisites 
-Use the commands below to install exiftool
-&nbsp;&nbsp;**CentOS/RHEL:** sudo dnf update && sudo dnf install perl-Image-ExifTool
-&nbsp;&nbsp;**Ubuntu:** sudo apt update && sudo apt upgrade && sudo apt install libimage-exiftool-perl
-&nbsp;&nbsp;**Mac:** brew install exiftool\n"
+Use the commands below to install exiftool  
+**CentOS/RHEL:** ```sudo dnf update && sudo dnf install perl-Image-ExifTool```  
+**Ubuntu:** ```sudo apt update && sudo apt upgrade && sudo apt install libimage-exiftool-perl```  
+**Mac:** ```brew install exiftool```
 
 ## File Processing Overview
 
 ### Step 1. Search media files (i.e. jpg, jpeg, mp4, mpg and mov) in Source Directory
-**/SourceDirectory/**
-&nbsp;&nbsp;file01.jpg
-&nbsp;&nbsp;file02.jpeg
-&nbsp;&nbsp;file03.mov
-&nbsp;&nbsp;file04.jpeg
+**/SourceDirectory/**  
+&nbsp;&nbsp;file01.jpg  
+&nbsp;&nbsp;file02.jpeg  
+&nbsp;&nbsp;file03.mov  
+&nbsp;&nbsp;file04.jpeg  
 &nbsp;&nbsp;file05.mov
 
 ### Step 2. Create temporary Work-In-Progress (WIP) directory
-**/SourceDirectory/WIP-YYYYMMDD-HHmmss**
+**/SourceDirectory/WIP-YYYYMMDD-HHmmss**  
 
-### Step 3. Move the found files to temporary Work-In-Progress (WIP) directory
-
-**/SourceDirectory/WIP-YYYYMMDD-HHmmss/**
-&nbsp;&nbsp;file01.jpg
-&nbsp;&nbsp;file02.jpeg
-&nbsp;&nbsp;file03.mov
-&nbsp;&nbsp;file04.jpeg
+### Step 3. Move/copy the found files to temporary Work-In-Progress (WIP) directory
+**/SourceDirectory/WIP-YYYYMMDD-HHmmss/**  
+&nbsp;&nbsp;file01.jpg  
+&nbsp;&nbsp;file02.jpeg  
+&nbsp;&nbsp;file03.mov  
+&nbsp;&nbsp;file04.jpeg  
 &nbsp;&nbsp;file05.mov
 
 ### Step 4. Create directories at Destination location
@@ -43,7 +57,7 @@ Use the commands below to install exiftool
 ### Step 5. Prepare (create) log file
 **/DestinationDirectory/rEXIFier-<YYYYMMDD>.log**
 
-### Step 6. Prepare and move the WIP files to Destination location with the chosed folder structure
+### Step 6. Prepare and move the WIP files to Destination location with the chosen folder structure
 **Destination folder structure options**
 --YMD = /YEAR/MONTH/DAY/picture.jpg, i.e. /DestinationDirectory/2021/05/10/picture.jpg
 --YM = /YEAR/MONTH/picture.jpg, i.e. /DestinationDirectory/2021/05/picture.jpg
