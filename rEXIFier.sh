@@ -20,6 +20,7 @@ ExtensionCaseSwitch="ext"
 FileSystemAttributeProcessingFlag=0
 # Resetting variables
 LogOutput="##########################################\n"
+FullHelpTip=""
 # Setting Target Directory structure with TargetDirectoryStructure, i.e. YMD = YEAR/MONTH/DAY, YM = YEAR/MONTH, Y = YEAR
 TargetDirectoryStructure="YM"
 # Setting variables
@@ -33,11 +34,13 @@ LogOutput+="${LogDate}\n"
 # Help options
 #=======================================================================
 HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help>'\n"
-UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute>\n"
-SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n Example: '/home/username/pictures/'\n"
-DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n Example: '/mystorage/sorted-pictures/'\n"
-ExtensionTip="Extension case switch options: \n--ExT=unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n--EXT=uppercase, i.e. jpeg > JPEG \n--ext=lowercase (recommended), i.e. JPEG > jpeg\n"
-FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\nIf enabled with '--FSAttribute', it can cause conflicts and affect file sorting.\n'--NoFSAttribute' (default) is the recommended option.\n"
+UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y> \n"
+SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n  Example: '/home/username/pictures/'\n"
+DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n  Example: '/mystorage/sorted-pictures/'\n"
+ExtensionTip="Extension case switch options: \n  --ExT = unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n  --EXT = uppercase, i.e. jpeg > JPEG \n  --ext = lowercase (recommended), i.e. JPEG > jpeg\n"
+FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\n  If enabled with --FSAttribute, it can cause conflicts and affect file sorting.\n  --NoFSAttribute (default) is the recommended option.\n"
+YMDTip="Destination folder structure:\n  --YMD = YEAR/MONTH/DAY/picture.jpg, i.e. 2021/05/10/picture.jpg\n  --YM = YEAR/MONTH/picture.jpg, i.e. 2021/05/picture.jpg\n  --Y = YEAR, i.e. 2021/picture.jpg\n"
+FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}\n"
 
 # End of Forming help menu options
 
@@ -345,7 +348,11 @@ fi
 
 # Checking if application or service is installed, piping errors to NULL
 if ( ! command -v exiftool &> /dev/null ) ; then
-  printf "Prerequisite Critical Error! 'exiftool' is not installed or it could not be found. Use the commands below to install the tool\n CentOS/RHEL: sudo dnf update && sudo dnf install perl-Image-ExifTool\n Ubuntu: sudo apt update && sudo apt upgrade && sudo apt install libimage-exiftool-perl \nExiting now.\n"
+  printf "Prerequisite Critical Error! 'exiftool' is not installed or it could not be found. Use the commands below to install the tool\n"
+  printf " CentOS/RHEL: sudo dnf update && sudo dnf install perl-Image-ExifTool\n"
+  printf " Ubuntu: sudo apt update && sudo apt upgrade && sudo apt install libimage-exiftool-perl\n"
+  printf " Mac: brew install exiftool\n"
+  printf "Exiting now.\n"
   exit
 else
   EXIFTOOLVER="$(exiftool -ver)"
@@ -363,7 +370,7 @@ fi
 case "${1}" in 
   # Checking if the first argument is a call for help
   -h|--help)
-    printf "${HelpTip}${UsageTip}\n"
+    printf "${FullHelpTip}\n"
     exit
     ;;
   # Checking if the first argument is a file source path and validating it
@@ -493,6 +500,18 @@ if [[ "${FileSystemAttributeProcessingFlag}" -eq 1 ]]; then
 else 
   LogOutput+="DISABLED\n";
 fi
+LogOutput+="    Destination folder structure: "
+case "${TargetDirectoryStructure}" in 
+  YMD)
+    LogOutput+="DESTINATION/YEAR/MONTH/DAY/\n"
+    ;;
+  YM)
+    LogOutput+="DESTINATION/YEAR/MONTH/\n"
+    ;;
+  Y)
+    LogOutput+="DESTINATION/YEAR/\n"
+    ;;
+esac
 #
 # Path normalisation
 #
