@@ -6,6 +6,12 @@ The script processes media files (i.e. jpg, jpeg, mp4, mpg and mov) and it uses 
 If EXIF attempts fail, then the less reliable file attributes get extracted. 
 In case the file attribute extaction fails, the source filename gets amended by adding 'unverified' suffix in "UVRFDXXX" format, i.e. my-picture-UVRFD000.jpg. The unverified files are placed in "Unverified" folder within "Destination" path, i.e. /my-destination/Unverified/my-picture-UVRFD000.jpg
 
+## Prerequisites 
+Use the commands below to install exiftool
+&nbsp;&nbsp;**CentOS/RHEL:** sudo dnf update && sudo dnf install perl-Image-ExifTool
+&nbsp;&nbsp;**Ubuntu:** sudo apt update && sudo apt upgrade && sudo apt install libimage-exiftool-perl
+&nbsp;&nbsp;**Mac:** brew install exiftool\n"
+
 ## File Processing Overview
 
 ### Step 1. Search media files (i.e. jpg, jpeg, mp4, mpg and mov) in Source Directory
