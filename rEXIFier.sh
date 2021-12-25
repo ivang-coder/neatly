@@ -21,8 +21,11 @@ FileSystemAttributeProcessingFlag=0
 # Resetting variables
 LogOutput="##########################################\n"
 FullHelpTip=""
-# Setting Target Directory structure with TargetDirectoryStructure, i.e. YMD = YEAR/MONTH/DAY, YM = YEAR/MONTH, Y = YEAR
+# Setting Target Directory structure with TargetDirectoryStructure, i.e. YMD = YEAR/MONTH/DAY, YM = YEAR/MONTH, Y = YEAR, DST = All (Custom)
 TargetDirectoryStructure="YM"
+CUSTOM="All"
+# Setting Source to Work-In-Progress (WIP) file transfer mode: <cp>, <mv> (default)
+CopyMove="mv"
 # Setting variables
 LogDate="$(date +%Y%m%d-%H%M%S)"
 WIPDirectoryDate="${LogDate}"
@@ -34,13 +37,14 @@ LogOutput+="${LogDate}\n"
 # Help options
 #=======================================================================
 HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help>'\n"
-UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y> \n"
+UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--DST> <--copy|--move>\n  Mandatory parameters: source-path, destination-path\n"
 SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n  Example: '/home/username/pictures/'\n"
 DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n  Example: '/mystorage/sorted-pictures/'\n"
-ExtensionTip="Extension case switch options: \n  --ExT = unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n  --EXT = uppercase, i.e. jpeg > JPEG \n  --ext = lowercase (recommended), i.e. JPEG > jpeg\n"
+ExtensionTip="Extension case switch options: \n  --ExT = unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n  --EXT = uppercase, i.e. jpeg > JPEG \n  --ext (default) = lowercase, i.e. JPEG > jpeg\n"
 FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\n  If enabled with --FSAttribute, it can cause conflicts and affect file sorting.\n  --NoFSAttribute (default) is the recommended option.\n"
-YMDTip="Destination folder structure:\n  --YMD = YEAR/MONTH/DAY/picture.jpg, i.e. 2021/05/10/picture.jpg\n  --YM = YEAR/MONTH/picture.jpg, i.e. 2021/05/picture.jpg\n  --Y = YEAR, i.e. 2021/picture.jpg\n"
-FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}\n"
+YMDTip="Destination folder structure:\n  --YMD = YEAR/MONTH/DAY/picture.jpg, i.e. 2021/05/10/picture.jpg\n  --YM (default) = YEAR/MONTH/picture.jpg, i.e. 2021/05/picture.jpg\n  --Y = YEAR, i.e. 2021/picture.jpg\n  --DST = All (Custom), i.e. Destination/All\n"
+CopyMoveTip="Source to Work-In-Progress (WIP) file transfer mode: \n  --copy = copy files,\n  --move = move files (default)\n"
+FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}${CopyMoveTip}\n"
 
 # End of Forming help menu options
 
@@ -424,7 +428,7 @@ esac
 # Checking if more than 2 arguments have been passed and processing them.
 if [[ "${#}" -gt 2 ]] ; then
   # Validating optional parameters starting with the third parameter
-  for Argument in ${@:2} ; do
+  for Argument in "${@:3}" ; do
     case "${Argument}" in 
       # Checking if the argument is an extension case switch and validating it
       --ExT)
@@ -466,6 +470,21 @@ if [[ "${#}" -gt 2 ]] ; then
         # Setting Target Directory structure with TargetDirectoryStructure to Y = YEAR
         TargetDirectoryStructure="Y"
         ;;
+      # Checking if the argument is a directory structure switch and validating it
+      --DST)
+        # Setting Target Directory structure with TargetDirectoryStructure to DST = All file in the root of Destination
+        TargetDirectoryStructure="DST"
+        ;;
+      # Checking if the argument is a copy-move switch and validating it
+      --copy)
+        # Setting the operation for transferring files from Source to Work-In-Progress (WIP) folder as "copy"
+        CopyMove="cp"
+        ;;
+      # Checking if the argument is a copy-move switch and validating it
+      --move)
+        # Setting the operation for transferring files from Source to Work-In-Progress (WIP) folder as "move"
+        CopyMove="mv"
+        ;;
       # Skipping if no expected parameter found
       *) 
         printf "Prerequisite Critical Error! Unexpected parameter detected: ${Argument}, ignoring it\n"
@@ -476,7 +495,7 @@ if [[ "${#}" -gt 2 ]] ; then
 else
   LogOutput+="No optional parameters have been passed. Applying the defaults.\n"
 fi
-
+# Writing the aggregate of parameters to the log file
 LogOutput+="Proceeding with parameters below.\n" 
 LogOutput+="  Mandatory parameters:\n"
 LogOutput+="    Source path: ${SourcePath}\n"
@@ -511,7 +530,21 @@ case "${TargetDirectoryStructure}" in
   Y)
     LogOutput+="DESTINATION/YEAR/\n"
     ;;
+  DST)
+    LogOutput+="DESTINATION/${CUSTOM}/\n"
+    ;;
 esac
+LogOutput+="    Source to Work-In-Progress (WIP) file transfer mode: "
+case "${CopyMove}" in 
+  cp)
+    LogOutput+="COPY\n"
+    ;;
+  mv)
+    LogOutput+="MOVE\n"
+    ;;
+esac
+# Printing the aggregate of parameters to the screen
+printf "${LogOutput}\n"
 #
 # Path normalisation
 #
@@ -588,8 +621,8 @@ else
   #   SourceFileAbsolutePath = SourceDirectoryPath + SourceFileBasename, where
   #     SourceFileBasename = SourceFileName + SourceFileExtension
   #
-  printf "Moving files from Source ${SourcePath} to Work-In-Progress ${WIPDirectoryPath} directory for processing\n"
-  LogOutput+="Moving files from Source ${SourcePath} to Work-In-Progress ${WIPDirectoryPath} directory for processing\n"
+  printf "Transferring files from Source ${SourcePath} to Work-In-Progress ${WIPDirectoryPath} directory for processing\n"
+  LogOutput+="Transferring files from Source ${SourcePath} to Work-In-Progress ${WIPDirectoryPath} directory for processing\n"
   for SourceFileAbsolutePath in ${SourceFileList[@]}; do
     # Ensure the file exists, then proceed with processing
     # "-e file" returns true if file exists
@@ -600,16 +633,19 @@ else
       SourceDirectoryPath="$(dirname "${SourceFileAbsolutePath}")"
       # Extracting file basename from source absolute path
       SourceFileBasename="$(basename "${SourceFileAbsolutePath}")"
+      # Substituting characters in file basename
+      SourceFileBasename="${SourceFileBasename//[/(}"
+      SourceFileBasename="${SourceFileBasename//]/)}"
       # Extracting file name
       SourceFileName="${SourceFileBasename%.*}"
       # Extracting file extension
       SourceFileExtension="${SourceFileBasename##*.}"
       # Forming Work-In-Progress file path
       WIPFileAbsolutePath="${WIPDirectoryPath}/${SourceFileBasename}"
-        # Moving file from source to Work-In-Progress directory, piping errors to NULL
-        if ( ! mv "${SourceFileAbsolutePath}" "${WIPFileAbsolutePath}" >/dev/null 2>&1 ) ; then
-          printf "Something went wrong! ${SourceFileAbsolutePath} could not be moved\n"
-          LogOutput+="Something went wrong! ${SourceFileAbsolutePath} could not be moved\n"
+        # Transferring file from source to Work-In-Progress directory, piping errors to NULL
+        if ( ! "${CopyMove}" "${SourceFileAbsolutePath}" "${WIPFileAbsolutePath}" >/dev/null 2>&1 ) ; then
+          printf "Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
+          LogOutput+="Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
           # Counting failed operations with files
           ((SourceFileMoveFailureCount+=1))
         else
@@ -624,8 +660,8 @@ else
 
     fi
   done
-  LogOutput+="${SourceFileMoveSuccessCount} files have been moved from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
-  LogOutput+="${SourceFileMoveFailureCount} files could not be moved from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
+  LogOutput+="${SourceFileMoveSuccessCount} files have been transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
+  LogOutput+="${SourceFileMoveFailureCount} files could not be transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
   LogOutput+="${SourceFileNotFoundCount} files could not be found in Source ${SourcePath} folder\n"
 fi
 
@@ -778,6 +814,10 @@ for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
       # Y = YEAR
       Y)
         DestinationStructure="${YEAR}"
+        ;;
+      # DST = Root of Destination
+      DST)
+        DestinationStructure="${CUSTOM}"
         ;;
     esac
 

@@ -2,7 +2,7 @@
 rEXIFier is a Shell-written EXIF-based media file processor with sort and deduplication features.
 
 ## Overview
-The script processes media files (i.e. jpg, jpeg, mp4, mpg and mov) and it uses EXIFTOOL to extract "SubSecCreateDate", "CreateDate" and "Model" metadata. Depending on the selected options, the processed files are moved/copied to "Destination" location with a chosen directory sturucture.
+The script processes media files (i.e. jpg, jpeg, mp4, mpg and mov) and it uses EXIFTOOL to extract "SubSecCreateDate", "CreateDate" and "Model" metadata. Depending on the selected options, the processed files are moved to "Destination" location with a chosen directory sturucture.
 
 If EXIF attempts fail to read metadata, then the less reliable file attributes get extracted by swithing on the appropriate option.
 
@@ -12,8 +12,9 @@ The unverified files are placed in "Unverified" folder within "Destination" path
 ## Filename format
 Filename format depends on the chosen folder structure.  
 &nbsp;&nbsp;--YMD = /YEAR/MONTH/DAY, i.e. /2021/05/10/picture.jpg  
-&nbsp;&nbsp;--YM = /YEAR/MONTH, i.e. /2021/05/picture.jpg  
+&nbsp;&nbsp;--YM (default) = /YEAR/MONTH, i.e. /2021/05/picture.jpg  
 &nbsp;&nbsp;--Y = /YEAR, i.e. /2021/picture.jpg
+&nbsp;&nbsp;--DST = /All, i.e. Destination/All/picture.jpg
 
 The expected filename format: **MODEL-DATE-SECONDS-SUBSECONDS.EXTENSION**  
 ```Example: ONEPLUSA5000-20200613-125351-184775.jpg```
@@ -63,8 +64,9 @@ Use the commands below to install exiftool
 ### Step 6. Prepare and move the WIP files to Destination location with the chosen folder structure
 **Destination folder structure options**  
 &nbsp;&nbsp;--YMD = /YEAR/MONTH/DAY/picture.jpg, i.e. /DestinationDirectory/2021/05/10/picture.jpg  
-&nbsp;&nbsp;--YM = /YEAR/MONTH/picture.jpg, i.e. /DestinationDirectory/2021/05/picture.jpg  
+&nbsp;&nbsp;--YM (default) = /YEAR/MONTH/picture.jpg, i.e. /DestinationDirectory/2021/05/picture.jpg  
 &nbsp;&nbsp;--Y = /YEAR, i.e. /DestinationDirectory/2021/picture.jpg
+&nbsp;&nbsp;--DST = /All, i.e. Destination/All/picture.jpg
 
 An example with YM (/YEAR/MONTH/) folder structure
 /DestinationDirectory/  
@@ -87,7 +89,8 @@ An example with YM (/YEAR/MONTH/) folder structure
 ## Help menu
 **Help:** for more parameters use '/bin/bash rEXIFier.sh <-h|--help>'
 
-**Usage:** '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y>
+**Usage:** '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--DST> <--copy|--move>  
+&nbsp;&nbsp;Mandatory parameters: **source-path**, **destination-path**
 
 **Source** absolute path is required with leading '/'. Alternatively use '.' for current directory.  
 ```Example: '/home/username/pictures/'```
@@ -106,8 +109,13 @@ An example with YM (/YEAR/MONTH/) folder structure
 
 **Destination folder structure:**  
 &nbsp;&nbsp;--YMD = YEAR/MONTH/DAY/picture.jpg, i.e. /2021/05/10/picture.jpg  
-&nbsp;&nbsp;--YM = YEAR/MONTH/picture.jpg, i.e. /2021/05/picture.jpg  
+&nbsp;&nbsp;--YM (default) = YEAR/MONTH/picture.jpg, i.e. /2021/05/picture.jpg  
 &nbsp;&nbsp;--Y = YEAR, i.e. /2021/picture.jpg  
+&nbsp;&nbsp;--DST = All, i.e. Destination/All/picture.jpg
+
+**Source to Work-In-Progress (WIP) file transfer mode:**  
+&nbsp;&nbsp;--copy = copy files  
+&nbsp;&nbsp;--move = move files (default)
 
 ## Credits, tips and source of inspiration  
 https://stackoverflow.com/questions/32062159/how-retrieve-the-creation-date-of-photos-with-a-script
