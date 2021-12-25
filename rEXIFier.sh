@@ -1,8 +1,8 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.4
-# Date: 2021-12-21
+# Version: v1.5
+# Date: 2021-12-25
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value

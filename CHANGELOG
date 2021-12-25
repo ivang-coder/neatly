@@ -8,4 +8,5 @@
 #   20211218 v1.2: added logging
 #   20211219 v1.3: "Unverified" (based on file system attributes) file duplication avoidance added
 #   20211221 v1.4: paths with whitespace and other special characters now supported
+#   20211225 v1.5: copy-move feature added, new "All" destination folder structure option added
 #=======================================================================
