@@ -126,7 +126,7 @@ An example with YM (/YEAR/MONTH/) folder structure
 ## Usage and examples
 The command below will **move** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive" with sorting by Year. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/```  
-&nbsp;&nbsp;It would be identical to the command below:  
+&nbsp;&nbsp;It would be equivalent to the command below:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move ```  
 
 The command below will **copy** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive" with no sorting by Year or Month or Day. File renaming will be done using EXIF metadata only. File extension case will be UnChanged:  
@@ -137,7 +137,7 @@ The command below will **copy** files from "upload" at Source Media Location to 
 
 The command below will **move** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive/all" with no file sorting, i.e. the result will be a pile of deduplicated files in the "all" folder. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --NOSORT```  
-&nbsp;&nbsp;It would be identical to the command below:  
+&nbsp;&nbsp;It would be equivalent to the command below:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --NOSORT --move ```  
 
 ## Use cases
