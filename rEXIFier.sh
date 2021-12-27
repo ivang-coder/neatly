@@ -17,7 +17,7 @@ InstanceNameBase="${InstanceName%.*}"
 # Setting Internal Field Separator (IFS) to new-line character to process filenames with spaces and other special characters
 IFS=$'\n'
 # Setting notification filename
-NotificationFile="processed-by-${InstanceNameBase}.info"
+NotificationFile="monitored-by-${InstanceNameBase}.info"
 # Setting extension case switch to "ext" with ExtensionCaseSwitch, i.e. changing file extension case to lowercase
 ExtensionCaseSwitch="ext"
 # 1 = Enable and 0 = Disable less reliable file attribute extraction with FileSystemAttributeProcessingFlag

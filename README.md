@@ -33,19 +33,24 @@ Use the commands below to install exiftool
 **CentOS/RHEL:** ```sudo dnf update && sudo dnf install perl-Image-ExifTool```  
 **Ubuntu:** ```sudo apt update && sudo apt upgrade && sudo apt install libimage-exiftool-perl```  
 **Mac:** ```brew install exiftool```
+**QNAP (Entware):** ```opkg install perl-image-exiftool```
 
 ## File Processing Overview
 
-### Step 1. Search media files (i.e. jpg, jpeg, mp4, mpg and mov) in Source Directory
+### Step 1. Confirm read-write access and create directories
+**Notification file at Source:** ```/SourceDirectory/monitoried-by-rEXIFier.info```  
+**Work-In-Progress (WIP) folder at Source:** ```/SourceDirectory/WIP-YYYYMMDD-HHmmss```  
+**Duplicates folder at Destination:** ```/DestinationDirectory/Duplicates```  
+**Unverified folder at Destination:** ```/DestinationDirectory/Unverified```  
+**Log file at Destination:** ```/DestinationDirectory/rEXIFier-YYYYMMDD.log```  
+
+### Step 2. Search media files (i.e. jpg, jpeg, mp4, mpg and mov) in Source Directory
 **/SourceDirectory/**  
 ├── file01.jpg  
 ├── file02.jpeg  
 ├── file03.mov  
 ├── file04.jpeg  
 └── file05.mov
-
-### Step 2. Create temporary Work-In-Progress (WIP) directory
-**/SourceDirectory/WIP-YYYYMMDD-HHmmss**  
 
 ### Step 3. Move/copy the found files to temporary Work-In-Progress (WIP) directory
 **/SourceDirectory/WIP-YYYYMMDD-HHmmss/**  
