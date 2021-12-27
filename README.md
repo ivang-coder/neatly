@@ -17,10 +17,10 @@ The unverified files are placed in "Unverified" folder within "Destination" path
 
 ## Filename format
 Filename format depends on the chosen folder structure.  
-&nbsp;&nbsp;--YMD = /YEAR/MONTH/DAY, i.e. /2021/05/10/picture.jpg  
-&nbsp;&nbsp;--YM = /YEAR/MONTH, i.e. /2021/05/picture.jpg  
-&nbsp;&nbsp;--Y (default) = /YEAR, i.e. /2021/picture.jpg
-&nbsp;&nbsp;--DST = /All, i.e. Destination/All/picture.jpg
+&nbsp;&nbsp;--YMD = YEAR/MONTH/DAY, i.e. /2021/05/10/picture.jpg  
+&nbsp;&nbsp;--YM = YEAR/MONTH, i.e. /2021/05/picture.jpg  
+&nbsp;&nbsp;--Y (default) = YEAR, i.e. /2021/picture.jpg
+&nbsp;&nbsp;--NOSORT = All, i.e. Destination/All/picture.jpg
 
 The expected filename format: **MODEL-DATE-SECONDS-SUBSECONDS.EXTENSION**  
 ```Example: ONEPLUSA5000-20200613-125351-184775.jpg```
@@ -68,11 +68,11 @@ Use the commands below to install exiftool
 **/DestinationDirectory/rEXIFier-<YYYYMMDD>.log**
 
 ### Step 6. Prepare and move the WIP files to Destination location with the chosen folder structure
-**Destination folder structure options**  
+**Destination files sorted by options**  
 &nbsp;&nbsp;--YMD = /YEAR/MONTH/DAY/picture.jpg, i.e. /DestinationDirectory/2021/05/10/picture.jpg  
 &nbsp;&nbsp;--YM = /YEAR/MONTH/picture.jpg, i.e. /DestinationDirectory/2021/05/picture.jpg  
 &nbsp;&nbsp;--Y (default) = /YEAR, i.e. /DestinationDirectory/2021/picture.jpg
-&nbsp;&nbsp;--DST = /All, i.e. Destination/All/picture.jpg
+&nbsp;&nbsp;--NOSORT = /All, i.e. Destination/All/picture.jpg
 
 An example with YM (/YEAR/MONTH/) folder structure
 /DestinationDirectory/  
@@ -95,7 +95,7 @@ An example with YM (/YEAR/MONTH/) folder structure
 ## Help menu
 **Help:** for more parameters use '/bin/bash rEXIFier.sh <-h|--help>'
 
-**Usage:** '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--DST> <--copy|--move>  
+**Usage:** '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>  
 &nbsp;&nbsp;Mandatory parameters: **source-path**, **destination-path**
 
 **Source** absolute path is required with leading '/'. Alternatively use '.' for current directory.  
@@ -113,11 +113,11 @@ An example with YM (/YEAR/MONTH/) folder structure
 &nbsp;&nbsp;--FSAttribute, can cause conflicts and affect file sorting  
 &nbsp;&nbsp;--NoFSAttribute (default) is the recommended option  
 
-**Destination folder structure:**  
+**Destination files sorted by:**  
 &nbsp;&nbsp;--YMD = YEAR/MONTH/DAY/picture.jpg, i.e. /2021/05/10/picture.jpg  
 &nbsp;&nbsp;--YM = YEAR/MONTH/picture.jpg, i.e. /2021/05/picture.jpg  
 &nbsp;&nbsp;--Y (default) = YEAR, i.e. /2021/picture.jpg  
-&nbsp;&nbsp;--DST = All, i.e. Destination/All/picture.jpg
+&nbsp;&nbsp;--NOSORT = All, i.e. Destination/All/picture.jpg
 
 **Source to Work-In-Progress (WIP) file transfer mode:**  
 &nbsp;&nbsp;--copy = copy files  
@@ -128,21 +128,72 @@ The command below will **move** files from "upload" at Source Media Location to 
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/```  
 &nbsp;&nbsp;It would be identical to the command below:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move ```  
+
 The command below will **copy** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive" with no sorting by Year or Month or Day. File renaming will be done using EXIF metadata only. File extension case will be UnChanged:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ExT --NoFSAttribute --DST --copy```  
+
 The command below will **copy** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive" with sorting by Year and Month. File renaming will be done using EXIF metadata and File System attributes. File extension case will be changed to UPPERCASE:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --EXT --YM --copy --FSAttribute```  
 
+The command below will **move** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive/all" with no file sorting, i.e. the result will be a pile of deduplicated files in the "all" folder. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
+```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --NOSORT```  
+&nbsp;&nbsp;It would be identical to the command below:  
+```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --NOSORT --move ```  
+
 ## Use cases
 ### Automated file processing with an out-of-support (EOL) NAS QNAP TS-210 or TS-212
-Let's assume there is a NAS QNAP TS-210 where all the photos and videos are kept. Being a Linux-based platform, we want to utilise its capabilities to process files in an automated way.
+#### Preamble
+Let's assume there is a NAS QNAP TS-210 where all the media files are kept. Being a Linux-based platform, we want to utilise its capabilities to process files in an automated way.
 QNAP used to officially support Optware (ipkg) and other 3rd-party package managers via the App Center, however they stopped it sometime in 2016.
 On top of limited 3rd-party package manager support, QNAP TS-210/TS-212 is out of support as of 27 March 2021.
 The tutorial below describes how to prepare QNAP TS-210 to run the script in an automated way via task scheduler.
+
 #### QNAP TS-210 prerequisites
-**Entware**
-Important! In order to use Entware, remove all the other package managers like Optware (ipkg), Qnapware, etc.
+The script utilizes exiftool, sha512sum and other packages that are not available in QNAP OS by default. In order to install the necessary tools, a 3rd-party package manager is required. For this use case we're going to use Entware.
+
+**Important!** In order to use Entware, remove all the other package managers like Optware (ipkg), Qnapware, etc. Restart of QNAP NAS is required once all the package managers removed.  
+##### Step 1. 3rd-party package manager removal
+```Web GUI > App Center > My Apps > remove obsolete 3rd-party managers like Optware (ipkg) v0.99, Qnapware, etc.```
+##### Step 2. Entware package manager installation
+**Download Entware Qpkg** ```http://bin.entware.net/other/Entware_1.03std.qpkg or http://bin.entware.net/other/Entware_1.03alt.qpkg```
+**Deploy Entware Qpkg** ```Web GUI > App Center > Settings > Install Manually > Browse > Select the downloaded Entware_1.03std.qpkg (Entware_1.03alt.qpkg) > Install```
+**Entware Qpkg deployment confirmation** ```Web GUI > App Center > My Apps > Entware-std (Entware-alt) should be available```
+##### Step 3. QNAP NAS restart
+```Web GUI > Homepage > Click on the dropdown with username > Select "Restart" > Select "Yes" when "Are you sure you want to restart the server"```
+##### Step 4. Opkg confirmation
+Once NAS is restarted, log in to CLI via SSH, "opkg" command should be available. Default Opkg location is /opt/.
+**Command:** ```# opkg --version``` **Expected outcome (sample):** ```opkg version 1bf042dd06751b693a8544d2317e5b969d666b69 (2021-06-13)```
+##### Step 5. Package maintenance
+**Update and upgrade the apps (just in case):**
+```
+# opkg list-installed
+# opkg update
+# opkg upgrade
+```
+##### Step 6. Requirement installation
+**Deploy the required packages:**
+```
+# opkg install perl-image-exiftool
+# opkg install coreutils-sha512sum
+# opkg install bash
+```
+##### Step 7. Script deployment
+**Create directory (do not use /opt):** ```# mkdir /apps && cd /apps```
+**Download the script:** ```# wget https://github.com/ivang-coder/rexifier/archive/refs/heads/master.zip --no-check-certificate```
+**Unpack the archive:** ```# unzip master.zip && mv rexifier-master/ rexifier```
+**Change permissions:** ```# chmod +x /apps/rexifier/rEXIFier.sh```
+**Script manual run:** ```# /opt/bin/bash /apps/rexifier/rEXIFier.sh /share/Media\ Upload/ /share/Media\ Archive/ --copy```
+
+##### Step 8. Script automation
+The script run can be event-driven or scheduled. Due to TS-210/TS-212 platform hardware limitations, running a container for the event-driven approach does not sound reasonable. For simplicity the script will be scheduled to run daily at 23:23 via Cron.
+
+**Important!** Due to the way the QNAP firmware updates crontab, do not use "crontab -e" as it will be overwritten on the next reboot. Use "vi /etc/config/crontab" instead.
+**Open crontab for editing:** ```# vi /etc/config/crontab```
+**Add crontab task:** ```23 23 * * * /opt/bin/bash /apps/rexifier/rEXIFier.sh /share/Media\ Upload/ /share/Media\ Archive/```
+**Apply new crontab:** ```# crontab /etc/config/crontab && /etc/init.d/crond.sh restart```
+**Verify crontab:** ```# crontab -l``` **Expected outcome:** ```23 23 * * * /opt/bin/bash /apps/rexifier/rEXIFier.sh /share/Media\ Upload/ /share/Media\ Archive/```
 
 ## Credits, tips and source of inspiration  
-https://stackoverflow.com/questions/32062159/how-retrieve-the-creation-date-of-photos-with-a-script
-https://github.com/Entware/entware/wiki/Install-on-QNAP-NAS
+**Photo processing** https://stackoverflow.com/questions/32062159/how-retrieve-the-creation-date-of-photos-with-a-script
+**Entware** https://github.com/Entware/entware/wiki/Install-on-QNAP-NAS
+**QNAP Crontab** https://wiki.qnap.com/wiki/Add_items_to_crontab

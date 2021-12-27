@@ -12,12 +12,12 @@
 #=======================================================================
 # Getting the name of script, <name>.<ext>
 InstanceName="$(basename "${0}")"
-# Getting the short name of script, <name>
-InstanceShortName="${InstanceName%.*}"
+# Stripping out the extension leaving just <name>
+InstanceNameBase="${InstanceName%.*}"
 # Setting Internal Field Separator (IFS) to new-line character to process filenames with spaces and other special characters
 IFS=$'\n'
 # Setting notification filename
-NotificationFile="processed-by-${InstanceShortName}.info"
+NotificationFile="processed-by-${InstanceNameBase}.info"
 # Setting extension case switch to "ext" with ExtensionCaseSwitch, i.e. changing file extension case to lowercase
 ExtensionCaseSwitch="ext"
 # 1 = Enable and 0 = Disable less reliable file attribute extraction with FileSystemAttributeProcessingFlag
@@ -25,7 +25,7 @@ FileSystemAttributeProcessingFlag=0
 # Resetting variables
 LogOutput="##########################################\n"
 FullHelpTip=""
-# Setting Target Directory structure with TargetDirectoryStructure, i.e. YMD = YEAR/MONTH/DAY, YM = YEAR/MONTH, Y = YEAR, DST = All (Custom)
+# Setting Target Directory structure with TargetDirectoryStructure, i.e. YMD = YEAR/MONTH/DAY, YM = YEAR/MONTH, Y = YEAR, NOSORT = All
 TargetDirectoryStructure="Y"
 CUSTOM="All"
 # Setting Source to Work-In-Progress (WIP) file transfer mode: <cp>, <mv> (default)
@@ -41,12 +41,12 @@ LogOutput+="${LogDate}\n"
 # Help options
 #=======================================================================
 HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help>'\n"
-UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--DST> <--copy|--move>\n  Mandatory parameters: source-path, destination-path\n"
+UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>\n  Mandatory parameters: source-path, destination-path\n"
 SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n  Example: '/home/username/pictures/'\n"
 DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n  Example: '/mystorage/sorted-pictures/'\n"
 ExtensionTip="Extension case switch options: \n  --ExT = unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n  --EXT = uppercase, i.e. jpeg > JPEG \n  --ext (default) = lowercase, i.e. JPEG > jpeg\n"
 FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\n  If enabled with --FSAttribute, it can cause conflicts and affect file sorting.\n  --NoFSAttribute (default) is the recommended option.\n"
-YMDTip="Destination folder structure:\n  --YMD = YEAR/MONTH/DAY/picture.jpg, i.e. 2021/05/10/picture.jpg\n  --YM (default) = YEAR/MONTH/picture.jpg, i.e. 2021/05/picture.jpg\n  --Y = YEAR, i.e. 2021/picture.jpg\n  --DST = All (Custom), i.e. Destination/All\n"
+YMDTip="Destination files sorted by:\n  --YMD = YEAR/MONTH/DAY/picture.jpg, i.e. 2021/05/10/picture.jpg\n  --YM (default) = YEAR/MONTH/picture.jpg, i.e. 2021/05/picture.jpg\n  --Y = YEAR, i.e. 2021/picture.jpg\n  --NOSORT = All (Custom), i.e. Destination/All\n"
 CopyMoveTip="Source to Work-In-Progress (WIP) file transfer mode: \n  --copy = copy files,\n  --move = move files (default)\n"
 FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}${CopyMoveTip}\n"
 
@@ -342,9 +342,7 @@ LogDumper(){
 
 # Prerequisite Checks begins
 #
-# Checking for absence of other running rEXIFier instances
-InstanceNameBase="${InstanceName%.*}" # Stripping out the extension leaving just <name>
-# Excluding the "grep" from the output and counting the number of lines
+# Checking for absence of other running rEXIFier instances and excluding the "grep" from the output and counting the number of lines
 InstanceCount="$(ps -ef | grep "${InstanceNameBase}" | grep -v grep | wc -l)"
 # In a common scenario "ps" command will be running in a child process (sub-shell) 
 # with the name matching the script name, hence we're checking if there are
@@ -354,9 +352,30 @@ if [[ "${InstanceCount}" > 2 ]]; then
   exit
 fi
 
+# Checking for BASH version, v4+ is required
+if [[ "${BASH_VERSINFO}" < 4 ]]; then
+  printf "Prerequisite Critical Error! Non-supported BASH version ${BASH_VERSINFO} is identified. BASH version 4+ is required. Exiting now.\n"
+  exit
+else
+  BASHVERSION="${BASH_VERSION}"
+  LogOutput+="BASH version: ${BASHVERSION}\n"
+fi
+
 # Checking if application or service is installed, piping errors to NULL
+if ( ! command -v sha512sum &> /dev/null ) ; then
+  printf "Prerequisite Critical Error! 'sha512sum' is not installed or it could not be found. Use the commands below to install\n"
+  printf " CentOS/RHEL: sudo dnf update && sudo dnf install coreutils\n"
+  printf " Ubuntu: sudo apt update && sudo apt upgrade && sudo apt install coreutils\n"
+  printf " Mac: brew install coreutils\n"
+  printf " QNAP (Entware): opkg install coreutils-sha512sum\n"
+  printf "Exiting now.\n"
+  exit
+else
+  SHA512SUMUTIL="$(sha512sum --version | head -n1 | awk '{print $4}')"
+  LogOutput+="sha512sum version: ${SHA512SUMUTIL}\n"
+fi
 if ( ! command -v exiftool &> /dev/null ) ; then
-  printf "Prerequisite Critical Error! 'exiftool' is not installed or it could not be found. Use the commands below to install the tool\n"
+  printf "Prerequisite Critical Error! 'exiftool' is not installed or it could not be found. Use the commands below to install\n"
   printf " CentOS/RHEL: sudo dnf update && sudo dnf install perl-Image-ExifTool\n"
   printf " Ubuntu: sudo apt update && sudo apt upgrade && sudo apt install libimage-exiftool-perl\n"
   printf " Mac: brew install exiftool\n"
@@ -476,9 +495,9 @@ if [[ "${#}" -gt 2 ]] ; then
         TargetDirectoryStructure="Y"
         ;;
       # Checking if the argument is a directory structure switch and validating it
-      --DST)
-        # Setting Target Directory structure with TargetDirectoryStructure to DST = All file in the root of Destination
-        TargetDirectoryStructure="DST"
+      --NOSORT)
+        # Setting Target Directory structure with TargetDirectoryStructure to NOSORT = All file in the root of Destination
+        TargetDirectoryStructure="NOSORT"
         ;;
       # Checking if the argument is a copy-move switch and validating it
       --copy)
@@ -524,19 +543,19 @@ if [[ "${FileSystemAttributeProcessingFlag}" -eq 1 ]]; then
 else 
   LogOutput+="DISABLED\n";
 fi
-LogOutput+="    Destination folder structure: "
+LogOutput+="    Destination files sorted by: "
 case "${TargetDirectoryStructure}" in 
   YMD)
-    LogOutput+="DESTINATION/YEAR/MONTH/DAY/\n"
+    LogOutput+="YEAR/MONTH/DAY/\n"
     ;;
   YM)
-    LogOutput+="DESTINATION/YEAR/MONTH/\n"
+    LogOutput+="YEAR/MONTH/\n"
     ;;
   Y)
-    LogOutput+="DESTINATION/YEAR/\n"
+    LogOutput+="YEAR/\n"
     ;;
-  DST)
-    LogOutput+="DESTINATION/${CUSTOM}/\n"
+  NOSORT)
+    LogOutput+="/${CUSTOM}/\n"
     ;;
 esac
 LogOutput+="    Source to Work-In-Progress (WIP) file transfer mode: "
@@ -849,8 +868,8 @@ if [[ ${PrerequisitesOK} ]] && [[ ${FilesFetched} ]] ; then
         Y)
           DestinationStructure="${YEAR}"
           ;;
-        # DST = Root of Destination
-        DST)
+        # NOSORT = All, Destination/All
+        NOSORT)
           DestinationStructure="${CUSTOM}"
           ;;
       esac
