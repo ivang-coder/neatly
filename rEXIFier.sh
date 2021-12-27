@@ -659,7 +659,7 @@ else
 fi
 
 # Moving the fetched files from source to Work-In-Progress directory
-if [[ ${PrerequisitesOK} ]] && [[ ${FilesFetched} ]] ; then
+if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   SourceFileMoveSuccessCount=0
   SourceFileMoveFailureCount=0
   SourceFileNotFoundCount=0
@@ -717,7 +717,7 @@ else
 fi
 
 # Begin file processing in Work-In-Progress directory
-if [[ ${PrerequisitesOK} ]] && [[ ${FilesFetched} ]] ; then
+if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   printf "Begin file processing in Work-In-Progress ${WIPDirectoryPath} directory\n"
   LogOutput+="Begin file processing in Work-In-Progress ${WIPDirectoryPath} directory\n"
   # Searching for files with specific video and image extensions in Work-In-Progress directory
@@ -1091,8 +1091,8 @@ if [[ ${PrerequisitesOK} ]] && [[ ${FilesFetched} ]] ; then
     fi
   done
 else
-  printf "No files have been moved to WIP $WIPDirectoryPath, the folder is expected to be empty.\n"
-  LogOutput+="No files have been moved to WIP $WIPDirectoryPath, the folder is expected to be empty.\n"
+  printf "No files have been moved to WIP $WIPDirectoryPath.\n"
+  LogOutput+="No files have been moved to WIP $WIPDirectoryPath.\n"
 fi
 # At this stage all the files in the Work-In-Progress directory have been processed and moved to other locations
 # Removing empty Work-In-Progress directory, piping errors to NULL
