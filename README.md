@@ -9,11 +9,17 @@ If EXIF attempts fail to read metadata, then the less reliable file attributes g
 In case file attribute extaction fails, the source filename gets amended by adding 'unverified' suffix in **"UVRFDXXX"** format, i.e. my-picture-UVRFD000.jpg.  
 The unverified files are placed in "Unverified" folder within "Destination" path, i.e. ```/my-destination/Unverified/my-picture-UVRFD000.jpg```
 
+## Compatibility
+**CentOS/RHEL:** v7, v8
+**Ubuntu:** 18.04 LTS, 20.04.3 LTS
+**QNAP (Entware):** 4.2.6, opkg version 1bf042dd06751b693a8544d2317e5b969d666b69 (2021-06-13)
+**WSL (Windows Linux Subsystem):** Ubuntu (18.04 LTS, 20.04.3 LTS)
+
 ## Filename format
 Filename format depends on the chosen folder structure.  
 &nbsp;&nbsp;--YMD = /YEAR/MONTH/DAY, i.e. /2021/05/10/picture.jpg  
-&nbsp;&nbsp;--YM (default) = /YEAR/MONTH, i.e. /2021/05/picture.jpg  
-&nbsp;&nbsp;--Y = /YEAR, i.e. /2021/picture.jpg
+&nbsp;&nbsp;--YM = /YEAR/MONTH, i.e. /2021/05/picture.jpg  
+&nbsp;&nbsp;--Y (default) = /YEAR, i.e. /2021/picture.jpg
 &nbsp;&nbsp;--DST = /All, i.e. Destination/All/picture.jpg
 
 The expected filename format: **MODEL-DATE-SECONDS-SUBSECONDS.EXTENSION**  
@@ -64,8 +70,8 @@ Use the commands below to install exiftool
 ### Step 6. Prepare and move the WIP files to Destination location with the chosen folder structure
 **Destination folder structure options**  
 &nbsp;&nbsp;--YMD = /YEAR/MONTH/DAY/picture.jpg, i.e. /DestinationDirectory/2021/05/10/picture.jpg  
-&nbsp;&nbsp;--YM (default) = /YEAR/MONTH/picture.jpg, i.e. /DestinationDirectory/2021/05/picture.jpg  
-&nbsp;&nbsp;--Y = /YEAR, i.e. /DestinationDirectory/2021/picture.jpg
+&nbsp;&nbsp;--YM = /YEAR/MONTH/picture.jpg, i.e. /DestinationDirectory/2021/05/picture.jpg  
+&nbsp;&nbsp;--Y (default) = /YEAR, i.e. /DestinationDirectory/2021/picture.jpg
 &nbsp;&nbsp;--DST = /All, i.e. Destination/All/picture.jpg
 
 An example with YM (/YEAR/MONTH/) folder structure
@@ -109,13 +115,34 @@ An example with YM (/YEAR/MONTH/) folder structure
 
 **Destination folder structure:**  
 &nbsp;&nbsp;--YMD = YEAR/MONTH/DAY/picture.jpg, i.e. /2021/05/10/picture.jpg  
-&nbsp;&nbsp;--YM (default) = YEAR/MONTH/picture.jpg, i.e. /2021/05/picture.jpg  
-&nbsp;&nbsp;--Y = YEAR, i.e. /2021/picture.jpg  
+&nbsp;&nbsp;--YM = YEAR/MONTH/picture.jpg, i.e. /2021/05/picture.jpg  
+&nbsp;&nbsp;--Y (default) = YEAR, i.e. /2021/picture.jpg  
 &nbsp;&nbsp;--DST = All, i.e. Destination/All/picture.jpg
 
 **Source to Work-In-Progress (WIP) file transfer mode:**  
 &nbsp;&nbsp;--copy = copy files  
 &nbsp;&nbsp;--move = move files (default)
 
+## Usage and examples
+The command below will **move** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive" with sorting by Year. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
+```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/```  
+&nbsp;&nbsp;It would be identical to the command below:  
+```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move ```  
+The command below will **copy** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive" with no sorting by Year or Month or Day. File renaming will be done using EXIF metadata only. File extension case will be UnChanged:  
+```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ExT --NoFSAttribute --DST --copy```  
+The command below will **copy** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive" with sorting by Year and Month. File renaming will be done using EXIF metadata and File System attributes. File extension case will be changed to UPPERCASE:  
+```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --EXT --YM --copy --FSAttribute```  
+
+## Use cases
+### Automated file processing with an out-of-support (EOL) NAS QNAP TS-210 or TS-212
+Let's assume there is a NAS QNAP TS-210 where all the photos and videos are kept. Being a Linux-based platform, we want to utilise its capabilities to process files in an automated way.
+QNAP used to officially support Optware (ipkg) and other 3rd-party package managers via the App Center, however they stopped it sometime in 2016.
+On top of limited 3rd-party package manager support, QNAP TS-210/TS-212 is out of support as of 27 March 2021.
+The tutorial below describes how to prepare QNAP TS-210 to run the script in an automated way via task scheduler.
+#### QNAP TS-210 prerequisites
+**Entware**
+Important! In order to use Entware, remove all the other package managers like Optware (ipkg), Qnapware, etc.
+
 ## Credits, tips and source of inspiration  
 https://stackoverflow.com/questions/32062159/how-retrieve-the-creation-date-of-photos-with-a-script
+https://github.com/Entware/entware/wiki/Install-on-QNAP-NAS
