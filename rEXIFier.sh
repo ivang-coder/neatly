@@ -1,8 +1,11 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.5
-# Date: 2021-12-25
+# Version: v1.6
+# Date: 2021-12-29
+
+# TODO
+# subfolder crawler
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -30,6 +33,9 @@ TargetDirectoryStructure="Y"
 CUSTOM="All"
 # Setting Source to Work-In-Progress (WIP) file transfer mode: <cp>, <mv> (default)
 CopyMove="mv"
+# Setting operations timer: <ON>, <OFF> (default)
+OperationsTimer="OFF"
+OperationsTimerLog="Operations timing (ms):\n"
 # Setting variables
 LogDate="$(date +%Y%m%d-%H%M%S)"
 WIPDirectoryDate="${LogDate}"
@@ -48,7 +54,8 @@ ExtensionTip="Extension case switch options: \n  --ExT = unchanged, i.e. JPEG > 
 FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\n  If enabled with --FSAttribute, it can cause conflicts and affect file sorting.\n  --NoFSAttribute (default) is the recommended option.\n"
 YMDTip="Destination files sorted by:\n  --YMD = YEAR/MONTH/DAY/picture.jpg, i.e. 2021/05/10/picture.jpg\n  --YM (default) = YEAR/MONTH/picture.jpg, i.e. 2021/05/picture.jpg\n  --Y = YEAR, i.e. 2021/picture.jpg\n  --NOSORT = All (Custom), i.e. Destination/All\n"
 CopyMoveTip="Source to Work-In-Progress (WIP) file transfer mode: \n  --copy = copy files,\n  --move = move files (default)\n"
-FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}${CopyMoveTip}\n"
+OperationsTimerTip="Operations timer (monitoring, debug): \n  --timerON = display and log operation timings,\n  --timerOFF = do not display and log operation timings (default)\n"
+FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}${CopyMoveTip}${OperationsTimerTip}\n"
 
 # End of Forming help menu options
 
@@ -178,6 +185,7 @@ FileListSorter(){
   FileListSorterResult="$(printf '%s\n' "$@" | LC_ALL=C sort)"
   #FileListSorterResult=$(printf '%s\n' "${ListToSort}" | LC_ALL=C sort)
   LogOutput+="Exiting FileListSorter with Result:\n${FileListSorterResult}\n"
+  LogOutput+="#####################\n"
 }
 
 # DigestComparison compares the file's message digest with all matched files 
@@ -509,6 +517,16 @@ if [[ "${#}" -gt 2 ]] ; then
         # Setting the operation for transferring files from Source to Work-In-Progress (WIP) folder as "move"
         CopyMove="mv"
         ;;
+      # Checking if the argument is operations timer switch and validating it
+      --timerON)
+        # Setting the operations timer ON, i.e. display and log operation timings
+        OperationsTimer="ON"
+        ;;
+      # Checking if the argument is operations timer switch and validating it
+      --timerOFF)
+        # Setting the operations timer OFF, i.e. do not display and log operation timings
+        OperationsTimer="OFF"
+        ;;
       # Skipping if no expected parameter found
       *) 
         printf "Prerequisite Critical Error! Unexpected parameter detected: ${Argument}, ignoring it\n"
@@ -567,6 +585,15 @@ case "${CopyMove}" in
     LogOutput+="MOVE\n"
     ;;
 esac
+LogOutput+="    Operations timer (monitoring, debug): "
+case "${OperationsTimer}" in 
+  ON)
+    LogOutput+="ON\n"
+    ;;
+  OFF)
+    LogOutput+="OFF\n"
+    ;;
+esac
 # Printing the aggregate of parameters to the screen
 printf "${LogOutput}\n"
 #
@@ -600,66 +627,81 @@ FileNameDuplicates="Duplicates"
 UnverifiedFiles="Unverified"
 
 # Prerequisite check for r+w permissions
-# Checking if the source directory is writable by creating a notification file, piping errors to NULL
+## Taking operations timer snapshot
+OperationsTimerStart=$(date +%s%3N)
+## Checking if the source directory is writable by creating a notification file, piping errors to NULL
 if ( ! touch "${SourcePath}/${NotificationFile}" >/dev/null 2>&1 ) ; then
   printf "Prerequisite Critical Error! Could not write ${SourcePath}/${NotificationFile}. Directory ${SourcePath} does not appear to be writable. Exiting now.\n"
   exit
 else
   PrerequisitesOK=1
 fi
-# Checking if the source directory is writable by creating Work-In-Progress folder, piping errors to NULL
+## Checking if the source directory is writable by creating Work-In-Progress folder, piping errors to NULL
 if ( ! mkdir -p "${WIPDirectoryPath}" >/dev/null 2>&1 ) ; then
   printf "Prerequisite Critical Error! Could not write ${WIPDirectoryPath}. Directory ${SourcePath} does not appear to be writable. Exiting now.\n"
   exit
 else
   PrerequisitesOK=1
 fi
-# Cheking if the destination directory is writable by creating Duplicates folder, piping errors to NULL
+## Cheking if the destination directory is writable by creating Duplicates folder, piping errors to NULL
 if ( ! mkdir -p "${DestinationPath}/${FileNameDuplicates}" >/dev/null 2>&1 ) ; then
   printf "Prerequisite Critical Error! Could not write ${FileNameDuplicates}. Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
   exit
 else
   PrerequisitesOK=1
 fi
-# Cheking if the destination directory is writable by creating UnverifiedFiles folder, piping errors to NULL
+## Cheking if the destination directory is writable by creating UnverifiedFiles folder, piping errors to NULL
 if ( ! mkdir -p "${DestinationPath}/${UnverifiedFiles}" >/dev/null 2>&1 ) ; then
   printf "Prerequisite Critical Error! Could not write ${UnverifiedFiles}. Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
   exit
 else
   PrerequisitesOK=1
 fi
-# Cheking if the destination directory is writable by creating Log file, piping errors to NULL
+## Cheking if the destination directory is writable by creating Log file, piping errors to NULL
 if ( ! touch "${DestinationPath}/${LogFileName}" >/dev/null 2>&1 ) ; then
   printf "Prerequisite Critical Error! Could not write ${LogFileName}. Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
   exit
 else
   PrerequisitesOK=1
 fi
-#
+## Taking operations timer snapshot, counting and registering operations timing
+OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Prerequisites: ${OperationsTimerResult}\n"
 # End of Prerequisite Checks
 
 # Creating Work-In-Progress directory in Source Folder for file processing
-#
-# Double-Checking if the source directory is writable by creating Work-In-Progress folder, piping errors to NULL
+## Double-Checking if the source directory is writable by creating Work-In-Progress folder, piping errors to NULL
 if ( ! mkdir -p "${WIPDirectoryPath}" >/dev/null 2>&1 ) ; then
   printf "Post-Prerequisite Critical Error! Could not write ${WIPDirectoryPath}. Directory ${SourcePath} does not appear to be writable.\n"
   LogOutput+="Post-Prerequisite Critical Error! Could not write ${WIPDirectoryPath}. Directory ${SourcePath} does not appear to be writable.\n"
   LogDumper "${LogOutput}"
 else
-  # Searching for files with specific video and image extensions in source directory
+  ### Taking operations timer snapshot
+  OperationsTimerStart=$(date +%s%3N)
+  ### Searching for files with specific video and image extensions in source directory
   SourceFileList=$(find "${SourcePath}" -maxdepth 1 -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
   -iname "*.[Jj][Pp][Ee][Gg]" -or \
   -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)
-  # Checking the number of fetched files before proceeding further
+  ### Checking the number of fetched files before proceeding further
   if [[ "${SourceFileList[@]: -1}" == "" ]] ; then 
     FilesFetched=0
   else
     FilesFetched=1
   fi
+  ## Taking operations timer snapshot, counting and registering operations timing
+  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source file search: ${OperationsTimerResult}\n"
+  # Display operation timings
+  printf "${OperationsTimerLog}"
+  # Log operation timings
+  LogOutput+="${OperationsTimerLog}"
+  # Reset operations timing variable
+  OperationsTimerLog="Operations timing (ms):\n"
 fi
 
 # Moving the fetched files from source to Work-In-Progress directory
 if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
+  ## Taking operations timer snapshot
+  OperationsTimerStart=$(date +%s%3N)
+  # Resetting variables
   SourceFileMoveSuccessCount=0
   SourceFileMoveFailureCount=0
   SourceFileNotFoundCount=0
@@ -690,27 +732,38 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
       SourceFileExtension="${SourceFileBasename##*.}"
       # Forming Work-In-Progress file path
       WIPFileAbsolutePath="${WIPDirectoryPath}/${SourceFileBasename}"
-        # Transferring file from source to Work-In-Progress directory, piping errors to NULL
-        if ( ! "${CopyMove}" "${SourceFileAbsolutePath}" "${WIPFileAbsolutePath}" >/dev/null 2>&1 ) ; then
-          printf "Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
-          LogOutput+="Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
-          # Counting failed operations with files
-          ((SourceFileMoveFailureCount+=1))
-        else
-          # Counting successful operations with files
-          ((SourceFileMoveSuccessCount+=1))
-        fi
+      # Transferring file from source to Work-In-Progress directory, piping errors to NULL
+      if ( ! "${CopyMove}" "${SourceFileAbsolutePath}" "${WIPFileAbsolutePath}" >/dev/null 2>&1 ) ; then
+        printf "Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
+        LogOutput+="Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
+        # Counting failed operations with files
+        ((SourceFileMoveFailureCount+=1))
+      else
+        # Counting successful operations with files
+        ((SourceFileMoveSuccessCount+=1))
+      fi
     else
       printf "Something went wrong! File ${SourceFileAbsolutePath} could not be found!\n"
       LogOutput+="Something went wrong! File ${SourceFileAbsolutePath} could not be found!\n"
       # Counting files that could not be found
       ((SourceFileNotFoundCount+=1))
-
     fi
   done
+  printf "${SourceFileMoveSuccessCount} files have been transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
+  printf "${SourceFileMoveFailureCount} files could not be transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
+  printf "${SourceFileNotFoundCount} files could not be found in Source ${SourcePath} folder\n"
   LogOutput+="${SourceFileMoveSuccessCount} files have been transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
   LogOutput+="${SourceFileMoveFailureCount} files could not be transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
   LogOutput+="${SourceFileNotFoundCount} files could not be found in Source ${SourcePath} folder\n"
+  ## Taking operations timer snapshot, counting and registering operations timing
+  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source-to-WIP transfer: ${OperationsTimerResult}\n"
+  # Display operation timings
+  printf "${OperationsTimerLog}"
+  # Log operation timings
+  LogOutput+="${OperationsTimerLog}"
+  LogOutput+="#############################\n"
+  # Reset operations timing variable
+  OperationsTimerLog="Operations timing (ms):\n"
 else
   printf "No files have been identified for processing in ${SourcePath}.\n"
   LogOutput+="No files have been identified for processing in ${SourcePath}.\n"
@@ -720,16 +773,32 @@ fi
 if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   printf "Begin file processing in Work-In-Progress ${WIPDirectoryPath} directory\n"
   LogOutput+="Begin file processing in Work-In-Progress ${WIPDirectoryPath} directory\n"
+  ## Taking operations timer snapshot
+  OperationsTimerStart=$(date +%s%3N)
   # Searching for files with specific video and image extensions in Work-In-Progress directory
   WIPFileList="$(find "${WIPDirectoryPath}" -maxdepth 1 -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
   -iname "*.[Jj][Pp][Ee][Gg]" -or \
   -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
+  ## Taking operations timer snapshot, counting and registering operations timing
+  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP file search: ${OperationsTimerResult}\n"
+  ## Taking operations timer snapshot
+  OperationsTimerStart=$(date +%s%3N)
   # Older cameras create images/videos with DSC_XXXX.* file name format and
   # usually without SubSecond metadata. 
   #
   # Sorting file names in this case is the only option to keep images in the original sequence, 
   # especially when multiple pictures being taken in one second
   FileListSorter "${WIPFileList}"
+  ## Taking operations timer snapshot, counting and registering operations timing
+  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP file sorting: ${OperationsTimerResult}\n"
+  # Display operation timings
+  printf "${OperationsTimerLog}"
+  printf "########\n"
+  # Log operation timings
+  LogOutput+="${OperationsTimerLog}"
+  LogOutput+="########\n"
+  # Reset operations timing variable
+  OperationsTimerLog="Operations timing (ms):\n"
   # Returning the value from FileListSorter function by assigning the value of output (FileListSorterResult) to an array
   # Bash functions, unlike functions in most programming languages do not allow you to return values to the caller
   WIPSortedFileAbsolutePaths="${FileListSorterResult}"
@@ -747,6 +816,10 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
     # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
     # ${#VAR} calculates the number of characters in a variable
     if [ -e "${WIPSortedFileAbsolutePath}" ] && [ "${#WIPSortedFileAbsolutePath}" != 0 ] ; then
+      # Resetting variables
+      SubSecCreateDateExtraction=0
+      CreateDateExtraction=0
+      FileSystemAttributeExtraction=0
       # Extracting path from Work-In-Progress absolute path
       WIPDirectoryPath="$(dirname "${WIPSortedFileAbsolutePath}")"
       # Extracting file basename from Work-In-Progress absolute path
@@ -764,11 +837,14 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
           NormalisedFileExtension="$(echo "${WIPFileExtension}" | awk '{print toupper($0)}')"
         fi
       fi
-
+      ## Taking operations timer snapshot
+      OperationsTimerStart=$(date +%s%3N)
       # Attempt to find an EXIF SubSecCreateDate from the file, if it exists.
       EXIF_SubSecCreateDate_OUTPUT="$(exiftool -s -f -SubSecCreateDate "${WIPSortedFileAbsolutePath}" | awk '{print $3":"$4}')"
       # Perform sanity check on correctly extracted EXIF SubSecCreateDate
       if [[ "${EXIF_SubSecCreateDate_OUTPUT}" != -* ]] && [[ "${EXIF_SubSecCreateDate_OUTPUT}" != 0* ]] ; then
+        # Setting flag
+        SubSecCreateDateExtraction=1
         # Good data extracted, pass it to EXIFSubSecCreateDateParser to extract fields
         # from the EXIF info
         EXIFSubSecCreateDateParser "${EXIF_SubSecCreateDate_OUTPUT}"
@@ -790,11 +866,21 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
           # Fill Model manually if tag extraction fails
           MODEL="CAMERA"
         fi
-      else
+        ## Taking operations timer snapshot, counting and registering operations timing
+        OperationsTimerStop=$(date +%s%3N)
+        OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart ))
+        OperationsTimerLog+="  EXIF SubSecCreateDate and Model extraction: ${OperationsTimerResult}\n"
+      fi
+      # Proceed with CreateDate if SubSecCreateDate extraction failed
+      if [[ ${SubSecCreateDateExtraction} -eq 0 ]] ; then
+        ## Taking operations timer snapshot
+        OperationsTimerStart=$(date +%s%3N)
         # Attempt to find an EXIF CreateDate from the file, if it exists.
         EXIF_CreateDate_OUTPUT="$(exiftool -s -f -CreateDate "${WIPSortedFileAbsolutePath}" | awk '{print $3":"$4}')"
         # Perform sanity check on correctly extracted EXIF CreateDate
         if [[ "${EXIF_CreateDate_OUTPUT}" != -* ]] && [[ "${EXIF_CreateDate_OUTPUT}" != 0* ]] ; then
+          # Setting flag
+          CreateDateExtraction=1
           # Good data extracted, pass it to EXIFCreateDateParser to extract fields
           # from the EXIF info
           EXIFCreateDateParser "${EXIF_CreateDate_OUTPUT}"
@@ -816,33 +902,46 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
             # Fill Model manually if tag extraction fails
             MODEL="CAMERA"
           fi
-        else
-          # Proceed to file attribute extraction if it is enabled
-          if [[ "${FileSystemAttributeProcessingFlag}" -eq 1 ]] ; then
-            # If EXIF tag extracion failed, the last resort is file system file attributes
-            #
-            # Attempt to find a File System Modify Time mtime attribute from the file.
-            FS_ModifyTime_OUTPUT="$(stat -c "%y" "${WIPSortedFileAbsolutePath}" | awk '{print $1":"$2}')"
-            # Perform sanity check on correctly extracted File System mtime attribute
-            if [[ "${FS_ModifyTime_OUTPUT}" != "" ]] && [[ "${FS_ModifyTime_OUTPUT}" != -* ]] && [[ "${FS_ModifyTime_OUTPUT}" != 0* ]] ; then
-              # Good data extracted, pass it to FSModifyTimeParser to extract components
-              FSModifyTimeParser "${FS_ModifyTime_OUTPUT}"
-              # Check the extracted date for validity
-              if [ "$(IsValidDate "${YEAR}" "${MONTH}" "${DAY}")" == 1 ]  ; then
-                LogOutput+="A valid File System date was found, using it.\n"
-              else
-                DATE="InvalidDate"
-                LogOutput+="No valid date was found, using ${DATE}.\n"
-              fi
-              # Fill Model manually, this attribute does not exist in File System
-              MODEL="CAMERA" 
-            fi
-          # Proceed with "unverified" file name forming flag if file attribute extraction is disabled
-          # or all previous data extraction methods failed
-          else
-            UNVERIFIED=1
-          fi
+          ## Taking operations timer snapshot, counting and registering operations timing
+          OperationsTimerStop=$(date +%s%3N)
+          OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart ))
+          OperationsTimerLog+="  EXIF CreateDate and Model extraction: ${OperationsTimerResult}\n"
         fi
+      fi
+      # Proceed with file attribute extraction if it is enabled and if all other attempts failed (SubSecCreateDate and CreateDate)
+      if [[ ${FileSystemAttributeProcessingFlag} -eq 1 ]] && [[ ${SubSecCreateDateExtraction} -eq 0 ]] && [[ ${CreateDateExtraction} -eq 0 ]] ; then
+        ## Taking operations timer snapshot
+        OperationsTimerStart=$(date +%s%3N)
+        # If EXIF tag extracion failed, the last resort is file system file attributes
+        #
+        # Attempt to find a File System Modify Time mtime attribute from the file.
+        FS_ModifyTime_OUTPUT="$(stat -c "%y" "${WIPSortedFileAbsolutePath}" | awk '{print $1":"$2}')"
+        ## Taking operations timer snapshot, counting and registering operations timing
+        OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  File stat extraction: ${OperationsTimerResult}\n"
+        # Perform sanity check on correctly extracted File System mtime attribute
+        if [[ "${FS_ModifyTime_OUTPUT}" != "" ]] && [[ "${FS_ModifyTime_OUTPUT}" != -* ]] && [[ "${FS_ModifyTime_OUTPUT}" != 0* ]] ; then
+          ## Taking operations timer snapshot
+          OperationsTimerStart=$(date +%s%3N)
+          # Good data extracted, pass it to FSModifyTimeParser to extract components
+          FSModifyTimeParser "${FS_ModifyTime_OUTPUT}"
+          # Check the extracted date for validity
+          if [ "$(IsValidDate "${YEAR}" "${MONTH}" "${DAY}")" == 1 ]  ; then
+            LogOutput+="A valid File System date was found, using it.\n"
+            # Setting flag
+            FileSystemAttributeExtraction=1
+          else
+            DATE="InvalidDate"
+            LogOutput+="No valid date was found, using ${DATE}.\n"
+          fi
+          # Fill Model manually, this attribute does not exist in File System
+          MODEL="CAMERA" 
+          ## Taking operations timer snapshot, counting and registering operations timing
+          OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  File stat date validation: ${OperationsTimerResult}\n"
+        fi
+      fi
+      # Proceed with "unverified" file name and forming flag if all extraction methods failed
+      if [[ ${SubSecCreateDateExtraction} -eq 0 ]] && [[ ${CreateDateExtraction} -eq 0 ]] && [[ ${FileSystemAttributeExtraction} -eq 0 ]] ; then
+        UNVERIFIED=1
       fi
 
       # Append UNVERIFIED to the filename if tag/attribute extraction failed.
@@ -882,48 +981,83 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
         # "-e file" returns true if file exists
         # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
         if [[ ! -f "${DestinationPath}/${UnverifiedFiles}/${FormatedFileName}" ]] ; then
+          ## Taking operations timer snapshot
+          OperationsTimerStart=$(date +%s%3N)
           # Attempting to move the file to the UnverifiedFiles directory for review
           if ( ! mv "${WIPSortedFileAbsolutePath}" "${DestinationPath}/${UnverifiedFiles}/${FormatedFileName}" ) ; then
+            ## Taking operations timer snapshot, counting and registering operations timing
+            OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Unverified move: ${OperationsTimerResult}\n"
             printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} FAILED\n"
+            if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
             printf "########\n"
             LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} FAILED\n"
+            if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
             LogOutput+="########\n"
           else
+            ## Taking operations timer snapshot, counting and registering operations timing
+            OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Unverified move: ${OperationsTimerResult}\n"
             printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} SUCCESSFUL\n"
+            if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
             printf "########\n"
             LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} SUCCESSFUL\n"
+            if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
             LogOutput+="########\n"
           fi
         # If Destination FileName does exist, get all the names in the Destination Directory 
         # matching the shortened file basename and process them to avoid duplicates
         else
+          ## Taking operations timer snapshot
+          OperationsTimerStart=$(date +%s%3N)
           FormatedShortenUnverifiedFileName="${WIPFileName}-"
           # Calling DuplicateSearch when a duplicate is identified
           DuplicateSearch "${DestinationPath}/${UnverifiedFiles}" "${FormatedShortenUnverifiedFileName}" "${NormalisedFileExtension}"
+          ## Taking operations timer snapshot, counting and registering operations timing
+          OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Unverified duplicate search: ${OperationsTimerResult}\n"
+          ## Taking operations timer snapshot
+          OperationsTimerStart=$(date +%s%3N)
           # Returning value from DuplicateSearch as DuplicateSearchResult and passing it to FileListSorter
           FileListSorter "${DuplicateSearchResult}"
+          ## Taking operations timer snapshot, counting and registering operations timing
+          OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Unverified duplicate file sorting: ${OperationsTimerResult}\n"
+          ## Taking operations timer snapshot
+          OperationsTimerStart=$(date +%s%3N)
           # Returning value from FileListSorter as FileListSorterResult and passing it to FileListToArray function to convert string to array
           FileListToArray "${FileListSorterResult}"
+          OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Unverified list-to-array: ${OperationsTimerResult}\n"
+          ## Taking operations timer snapshot
+          OperationsTimerStart=$(date +%s%3N)
           # Calling FileNameUnverifiedIncrementer against the Element of matched filenames to change the filename suffix
           FileNameUnverifiedIncrementer "${FileListToArrayLastElement}"
           # Returning the incremented element from FileNameUnverifiedIncrementer function
           FileNameIncrementedElement="${FileNameUnverifiedIncrementerResult}"
           # Re-forming the File Name with the incremented Element
           FormatedFileName="${WIPFileName}-UVRFD${FileNameIncrementedElement}.${NormalisedFileExtension}"
+          ## Taking operations timer snapshot, counting and registering operations timing
+          OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Unverified duplicate increment: ${OperationsTimerResult}\n"
           # Checking if Destination FileName exists
           # "-e file" returns true if file exists
           # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
           if [[ ! -f "${DestinationPath}/${UnverifiedFiles}/${FormatedFileName}" ]] ; then
+            ## Taking operations timer snapshot
+            OperationsTimerStart=$(date +%s%3N)
             # Moving the file to the UnverifiedFiles directory for review
             if ( ! mv "${WIPSortedFileAbsolutePath}" "${DestinationPath}/${UnverifiedFiles}/${FormatedFileName}" ) ; then
+              ## Taking operations timer snapshot, counting and registering operations timing
+              OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Unverified dedup move: ${OperationsTimerResult}\n"
               printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} FAILED\n"
+              if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
               printf "########\n"
               LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} FAILED\n"
+              if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
               LogOutput+="########\n"
             else
+              ## Taking operations timer snapshot, counting and registering operations timing
+              OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Unverified dedup move: ${OperationsTimerResult}\n"
               printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} SUCCESSFUL\n"
+              if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
               printf "########\n"
               LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${UnverifiedFiles}/${FormatedFileName} SUCCESSFUL\n"
+              if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
               LogOutput+="########\n"
             fi
           else
@@ -943,36 +1077,62 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
           # "-e file" returns true if file exists
           # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
           if [[ ! -f "${DestinationPath}/${DestinationStructure}/${FormatedFileName}" ]] ; then        
+            ## Taking operations timer snapshot
+            OperationsTimerStart=$(date +%s%3N)
             # Moving the file to the Desination File Path
             if ( ! mv "${WIPSortedFileAbsolutePath}" "${DestinationPath}/${DestinationStructure}/${FormatedFileName}" ) ; then
+              ## Taking operations timer snapshot, counting and registering operations timing
+              OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Destination move: ${OperationsTimerResult}\n"
               printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
+              if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
               printf "########\n"
               LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
+              if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
               LogOutput+="########\n"
             else
+              ## Taking operations timer snapshot, counting and registering operations timing
+              OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Destination move: ${OperationsTimerResult}\n"
               printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} SUCCESSFUL\n"
+              if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
               printf "########\n"
               LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} SUCCESSFUL\n"
+              if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
               LogOutput+="########\n"
             fi
           # If Destination FileName does exist, get all the names in the Destination Directory 
           # matching the shortened file basename and process them to avoid duplicates
           else
+            ## Taking operations timer snapshot
+            OperationsTimerStart=$(date +%s%3N)
             # Calling DuplicateSearch when a duplicate is identified
             LogOutput+="Calling DuplicateSearch with FormatedShortenFileName: ${FormatedShortenFileName}\n"
             DuplicateSearch "${DestinationPath}/${DestinationStructure}" "${FormatedShortenFileName}" "${NormalisedFileExtension}"
+            ## Taking operations timer snapshot, counting and registering operations timing
+            OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Destination duplicate search: ${OperationsTimerResult}\n"
+            ## Taking operations timer snapshot
+            OperationsTimerStart=$(date +%s%3N)
             # Returning value from DuplicateSearch as DuplicateSearchResult and passing it to FileListSorter
             LogOutput+="Calling FileListSorter function against {DuplicateSearchResult} ${DuplicateSearchResult}\n"
             FileListSorter "${DuplicateSearchResult}"
+            ## Taking operations timer snapshot, counting and registering operations timing
+            OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Destination duplicate file sorting: ${OperationsTimerResult}\n"
+            ## Taking operations timer snapshot
+            OperationsTimerStart=$(date +%s%3N)
             # Returning value from FileListSorter as FileListSorterResult and passing it to FileListToArray function to convert string to array
             LogOutput+="Calling FileListToArray function against {FileListSorterResult} ${FileListSorterResult}\n"
             FileListToArray "${FileListSorterResult}"
+            ## Taking operations timer snapshot, counting and registering operations timing
+            OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Destination list-to-array: ${OperationsTimerResult}\n"
+            ## Taking operations timer snapshot
+            OperationsTimerStart=$(date +%s%3N)
             LogOutput+="Receiving FileListToArray function results FileListToArrayResult ${FileListToArrayResult}\n"
             # Defining/resetting checksum match variable for counting file duplicates
             CheckSumMatchCount=0
             # Calling DigestComparison to compare the file's message digest with all matched files in FileListToArrayResult
             LogOutput+="Calling DigestComparison function against {WIPSortedFileAbsolutePath} ${WIPSortedFileAbsolutePath} and {FileListToArrayResult} ${FileListToArrayResult}\n"
             DigestComparison "${WIPSortedFileAbsolutePath}" "${FileListToArrayResult}"
+            ## Taking operations timer snapshot, counting and registering operations timing
+            OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Destination duplicate digest comparison: ${OperationsTimerResult}\n"
             # Returning checksum match count from DigestComparison function
             LogOutput+="Calling CheckSumMatchCount function against {DigestComparisonCheckSumMatchCount} ${DigestComparisonCheckSumMatchCount}\n"
             CheckSumMatchCount="${DigestComparisonCheckSumMatchCount}"
@@ -983,8 +1143,12 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
             # Example: pictures created simultaneously by two cameras of the same Make/Model
             # Changing the SUBSECOND part by 000001 increment to make the filename unique
             if [[ "CheckSumMatchCount" -eq 0 ]] ; then
+              ## Taking operations timer snapshot
+              OperationsTimerStart=$(date +%s%3N)
               # Calling FileNameIncrementer against the last member with highest SUBSECOND number in the sorted array of matched filenames to change the filename suffix
               FileNameIncrementer "${FileListToArrayLastElement}"
+              ## Taking operations timer snapshot, counting and registering operations timing
+              OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Destination duplicate increment: ${OperationsTimerResult}\n"
               # Returning the incremented element from FileNameIncrementer function
               IncrementedSubsecond="${FileNameIncrementerResult}"
               # Re-forming the File Name with the incremented SUBSECOND
@@ -993,16 +1157,26 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
               # "-e file" returns true if file exists
               # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
               if [[ ! -f "${DestinationPath}/${DestinationStructure}/${FormatedFileName}" ]] ; then
+                ## Taking operations timer snapshot
+                OperationsTimerStart=$(date +%s%3N)
                 # Attempting to move the file to the Desination File Path
                 if ( ! mv "${WIPSortedFileAbsolutePath}" "${DestinationPath}/${DestinationStructure}/${FormatedFileName}" ) ; then
+                  ## Taking operations timer snapshot, counting and registering operations timing
+                  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Destination dedup move: ${OperationsTimerResult}\n"
                   printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
+                  if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
                   printf "########\n"
                   LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} FAILED\n"
+                  if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
                   LogOutput+="########\n"
                 else
+                  ## Taking operations timer snapshot, counting and registering operations timing
+                  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Destination dedup move: ${OperationsTimerResult}\n"
                   printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} SUCCESSFUL\n"
+                  if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
                   printf "########\n"
                   LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${DestinationStructure}/${FormatedFileName} SUCCESSFUL\n"
+                  if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
                   LogOutput+="########\n"
                 fi
               else
@@ -1025,30 +1199,56 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
                 # "-e file" returns true if file exists
                 # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
                 if [[ ! -f "${DestinationPath}/${FileNameDuplicates}/${FormatedFileName}" ]] ; then
+                  ## Taking operations timer snapshot
+                  OperationsTimerStart=$(date +%s%3N)
                   # Attempting to move the file to the FileNameDuplicates directory for review
                   if ( ! mv "${WIPSortedFileAbsolutePath}" "${DestinationPath}/${FileNameDuplicates}/${FormatedFileName}" ) ; then
+                    ## Taking operations timer snapshot, counting and registering operations timing
+                    OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Duplicates move: ${OperationsTimerResult}\n"
                     printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+                    if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
                     printf "########\n"
                     LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+                    if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
                     LogOutput+="########\n"
                   else
+                    ## Taking operations timer snapshot, counting and registering operations timing
+                    OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Duplicates move: ${OperationsTimerResult}\n"
                     printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} SUCCESSFUL\n"
+                    if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
                     printf "########\n"
                     LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} SUCCESSFUL\n"
+                    if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
                     LogOutput+="########\n"
                   fi
                 # If Destination FileName does exist, get all the names in the Destination Directory 
                 # matching the shortened file basename and process them to avoid duplicates
                 else
+                  ## Taking operations timer snapshot
+                  OperationsTimerStart=$(date +%s%3N)
                   FormatedShortenDuplicateFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-"
                   # Calling DuplicateSearch when a duplicate is identified
                   DuplicateSearch "${DestinationPath}/${FileNameDuplicates}" "${FormatedShortenDuplicateFileName}" "${NormalisedFileExtension}"
+                  ## Taking operations timer snapshot, counting and registering operations timing
+                  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Duplicates duplicate search: ${OperationsTimerResult}\n"
+                  ## Taking operations timer snapshot
+                  OperationsTimerStart=$(date +%s%3N)
                   # Returning value from DuplicateSearch as DuplicateSearchResult and passing it to FileListSorter
                   FileListSorter "${DuplicateSearchResult}"
+                  ## Taking operations timer snapshot, counting and registering operations timing
+                  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Duplicates file sorting: ${OperationsTimerResult}\n"
+                  ## Taking operations timer snapshot
+                  OperationsTimerStart=$(date +%s%3N)
                   # Returning value from FileListSorter as FileListSorterResult and passing it to FileListToArray function to convert string to array
                   FileListToArray "${FileListSorterResult}"
+                  ## Taking operations timer snapshot, counting and registering operations timing
+                  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Duplicates list-to-array: ${OperationsTimerResult}\n"
+                  ## Taking operations timer snapshot
+                  OperationsTimerStart=$(date +%s%3N)
                   # Calling FileNameDuplicateIncrementer against the Element of matched filenames to change the filename suffix
                   FileNameDuplicateIncrementer "${FileListToArrayLastElement}"
+                  ## Taking operations timer snapshot, counting and registering operations timing
+                  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Duplicates duplicate increment: ${OperationsTimerResult}\n"
                   # Returning the incremented element from FileNameIncrementer function
                   FileNameIncrementedElement="${FileNameDuplicateIncrementerResult}"
                   # Re-forming the File Name with the incremented Element
@@ -1058,22 +1258,34 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
                   # "-e file" returns true if file exists
                   # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
                   if [[ ! -f "${DestinationPath}/${FileNameDuplicates}/${FormatedFileName}" ]] ; then
+                    ## Taking operations timer snapshot
+                    OperationsTimerStart=$(date +%s%3N)
                     # Moving the file to the FileNameDuplicates directory for review
                     if ( ! mv "${WIPSortedFileAbsolutePath}" "${DestinationPath}/${FileNameDuplicates}/${FormatedFileName}" ) ; then
+                      ## Taking operations timer snapshot, counting and registering operations timing
+                      OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Duplicated dedup move: ${OperationsTimerResult}\n"
                       printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+                      if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
                       printf "########\n"
                       LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} FAILED\n"
+                      if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
                       LogOutput+="########\n"
                     else
+                      ## Taking operations timer snapshot, counting and registering operations timing
+                      OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP-to-Duplicated dedup move: ${OperationsTimerResult}\n"
                       printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} SUCCESSFUL\n"
+                      if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
                       printf "########\n"
                       LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} SUCCESSFUL\n"
+                      if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
                       LogOutput+="########\n"
                     fi
                   else
                     printf "Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName} is stopped to avoid overriding the existing file. Check duplicate avoidance functions\n"
+                    if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
                     printf "########\n"
                     LogOutput+="Moving ${WIPSortedFileAbsolutePath} to ${DestinationPath}/${FileNameDuplicates}/${FormatedFileName}  is stopped to avoid overriding the existing file. Check duplicate avoidance functions\n"
+                    if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
                     LogOutput+="########\n"
                   fi
                 fi
@@ -1086,6 +1298,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
       WIPSortedFileAbsolutePath=""; WIPFileBasename=""; WIPFileName=""; WIPFileExtension=""; NormalisedFileExtension=""; FormatedFileName="";
       DATE=""; YEAR=""; MONTH=""; DAY=""; HOUR=""; MINUTE=""; SECOND=""; SUBSECOND=""; LONGSUBSECOND=""; 
       MODEL=""; UNVERIFIED=""
+      OperationsTimerLog="Operations timing (ms):\n"
     else
       LogOutput+="File ${WIPSortedFileAbsolutePath} not found!\n"
     fi
