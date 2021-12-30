@@ -10,6 +10,7 @@ In case file attribute extaction fails, the source filename gets amended by addi
 The unverified files are placed in "Unverified" folder within "Destination" path, i.e. ```/my-destination/Unverified/my-picture-UVRFD000.jpg```
 
 ## Compatibility
+**BASH:** v4+
 **CentOS/RHEL:** v7, v8
 **Ubuntu:** 18.04 LTS, 20.04.3 LTS
 **QNAP (Entware):** 4.2.6, opkg version 1bf042dd06751b693a8544d2317e5b969d666b69 (2021-06-13)
@@ -100,7 +101,7 @@ An example with YM (/YEAR/MONTH/) folder structure
 ## Help menu
 **Help:** for more parameters use '/bin/bash rEXIFier.sh <-h|--help>'
 
-**Usage:** '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>  
+**Usage:** '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>  <--timerON|--timerOFF>  
 &nbsp;&nbsp;Mandatory parameters: **source-path**, **destination-path**
 
 **Source** absolute path is required with leading '/'. Alternatively use '.' for current directory.  
@@ -128,11 +129,15 @@ An example with YM (/YEAR/MONTH/) folder structure
 &nbsp;&nbsp;--copy = copy files  
 &nbsp;&nbsp;--move = move files (default)
 
+**Operations timer (monitoring, debug):**  
+&nbsp;&nbsp;--timerON = display and log operation timings  
+&nbsp;&nbsp;--timerOFF = do not display and log operation timings (default)
+
 ## Usage and examples
 The command below will **move** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive" with sorting by Year. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/```  
 &nbsp;&nbsp;It would be equivalent to the command below:  
-```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move ```  
+```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move --timerOFF```  
 
 The command below will **copy** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive" with no sorting by Year or Month or Day. File renaming will be done using EXIF metadata only. File extension case will be UnChanged:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ExT --NoFSAttribute --DST --copy```  
@@ -143,7 +148,7 @@ The command below will **copy** files from "upload" at Source Media Location to 
 The command below will **move** files from "upload" at Source Media Location to Destination Media Location keeping all files under "archive/all" with no file sorting, i.e. the result will be a pile of deduplicated files in the "all" folder. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
 ```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --NOSORT```  
 &nbsp;&nbsp;It would be equivalent to the command below:  
-```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --NOSORT --move ```  
+```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --NOSORT --move --timerOFF```  
 
 ## Use cases
 ### Automated file processing with an out-of-support (EOL) NAS QNAP TS-210 or TS-212
