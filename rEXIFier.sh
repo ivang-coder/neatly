@@ -47,7 +47,7 @@ LogOutput+="${LogDate}\n"
 # Help options
 #=======================================================================
 HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help>'\n"
-UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>\n  Mandatory parameters: source-path, destination-path\n"
+UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move> <--timerON|--timerOFF>\n  Mandatory parameters: source-path, destination-path\n"
 SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n  Example: '/home/username/pictures/'\n"
 DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n  Example: '/mystorage/sorted-pictures/'\n"
 ExtensionTip="Extension case switch options: \n  --ExT = unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n  --EXT = uppercase, i.e. jpeg > JPEG \n  --ext (default) = lowercase, i.e. JPEG > jpeg\n"
@@ -668,87 +668,139 @@ fi
 OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Prerequisites: ${OperationsTimerResult}\n"
 # End of Prerequisite Checks
 
-# Creating Work-In-Progress directory in Source Folder for file processing
-## Double-Checking if the source directory is writable by creating Work-In-Progress folder, piping errors to NULL
-if ( ! mkdir -p "${WIPDirectoryPath}" >/dev/null 2>&1 ) ; then
-  printf "Post-Prerequisite Critical Error! Could not write ${WIPDirectoryPath}. Directory ${SourcePath} does not appear to be writable.\n"
-  LogOutput+="Post-Prerequisite Critical Error! Could not write ${WIPDirectoryPath}. Directory ${SourcePath} does not appear to be writable.\n"
-  LogDumper "${LogOutput}"
+# Checking files in source directory
+# Taking operations timer snapshot
+OperationsTimerStart=$(date +%s%3N)
+### Confirming files with specific video and image extensions in source directory and its subfolders, ingoring hidden folders and files with leading "."
+SourceFileCheck="$(find "${SourcePath}" -not -path '*/\.*' -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
+-iname "*.[Jj][Pp][Ee][Gg]" -or \
+-iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
+### Checking the number of fetched files before proceeding further
+if [[ "${SourceFileCheck[@]: -1}" == "" ]] ; then 
+  FilesFetched=0
 else
-  ### Taking operations timer snapshot
-  OperationsTimerStart=$(date +%s%3N)
-  ### Searching for files with specific video and image extensions in source directory
-  SourceFileList=$(find "${SourcePath}" -maxdepth 1 -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
-  -iname "*.[Jj][Pp][Ee][Gg]" -or \
-  -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)
-  ### Checking the number of fetched files before proceeding further
-  if [[ "${SourceFileList[@]: -1}" == "" ]] ; then 
-    FilesFetched=0
-  else
-    FilesFetched=1
-  fi
-  ## Taking operations timer snapshot, counting and registering operations timing
-  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source file search: ${OperationsTimerResult}\n"
-  # Display operation timings
-  printf "${OperationsTimerLog}"
-  # Log operation timings
-  LogOutput+="${OperationsTimerLog}"
-  # Reset operations timing variable
-  OperationsTimerLog="Operations timing (ms):\n"
+  FilesFetched=1
 fi
+## Taking operations timer snapshot, counting and registering operations timing
+OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source file check search: ${OperationsTimerResult}\n"
+# Display operation timings
+printf "${OperationsTimerLog}"
+# Log operation timings
+LogOutput+="${OperationsTimerLog}"
+# Reset operations timing variable
+OperationsTimerLog="Operations timing (ms):\n"
 
-# Moving the fetched files from source to Work-In-Progress directory
+# Seaching and moving files from source to Work-In-Progress directory
 if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   ## Taking operations timer snapshot
   OperationsTimerStart=$(date +%s%3N)
+  # Passing Source folder name, i.e. no path
+  SourcePathBasename="$(basename "${SourcePath}")"
   # Resetting variables
   SourceFileMoveSuccessCount=0
   SourceFileMoveFailureCount=0
   SourceFileNotFoundCount=0
-  # Taking one file at a time and processing it
-  #
-  # File path composition
-  #   SourceFileAbsolutePath = SourceDirectoryPath + SourceFileBasename, where
-  #     SourceFileBasename = SourceFileName + SourceFileExtension
-  #
-  printf "Transferring files from Source ${SourcePath} to Work-In-Progress ${WIPDirectoryPath} directory for processing\n"
-  LogOutput+="Transferring files from Source ${SourcePath} to Work-In-Progress ${WIPDirectoryPath} directory for processing\n"
-  for SourceFileAbsolutePath in ${SourceFileList[@]}; do
-    # Ensure the file exists, then proceed with processing
-    # "-e file" returns true if file exists
-    # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
-    # ${#VAR} calculates the number of characters in a variable
-    if [ -e "${SourceFileAbsolutePath}" ] && [ "${#SourceFileAbsolutePath}" != 0 ] ; then
-      # Extracting path from source absolute path
-      SourceDirectoryPath="$(dirname "${SourceFileAbsolutePath}")"
-      # Extracting file basename from source absolute path
-      SourceFileBasename="$(basename "${SourceFileAbsolutePath}")"
-      # Substituting characters in file basename
-      SourceFileBasename="${SourceFileBasename//[/(}"
-      SourceFileBasename="${SourceFileBasename//]/)}"
-      # Extracting file name
-      SourceFileName="${SourceFileBasename%.*}"
-      # Extracting file extension
-      SourceFileExtension="${SourceFileBasename##*.}"
-      # Forming Work-In-Progress file path
-      WIPFileAbsolutePath="${WIPDirectoryPath}/${SourceFileBasename}"
-      # Transferring file from source to Work-In-Progress directory, piping errors to NULL
-      if ( ! "${CopyMove}" "${SourceFileAbsolutePath}" "${WIPFileAbsolutePath}" >/dev/null 2>&1 ) ; then
-        printf "Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
-        LogOutput+="Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
-        # Counting failed operations with files
-        ((SourceFileMoveFailureCount+=1))
-      else
-        # Counting successful operations with files
-        ((SourceFileMoveSuccessCount+=1))
+  ## Descending to the Source to get the list of subfolders with relative paths
+  cd "${SourcePath}"
+  ## Searching for folders in source directory
+  SourceFolderList="$(find . -not -path '*/\.*' -type d | sort -n)"
+  ## Confirming the folder list is not empty, ${#VAR} calculates the number of characters in a variable
+  if [ "${#SourceFolderList}" != 0 ] ; then
+    for SourceSubFolder in ${SourceFolderList[@]} ; do
+      # Ensure the file exists, then proceed with processing
+      # "-e file" returns true if file exists
+      # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
+      # ${#VAR} calculates the number of characters in a variable
+      if [ -e "${SourceSubFolder}" ] && [ "${#SourceSubFolder}" != 0 ] ; then
+        ### Searching for files with specific video and image extensions in source directory
+        SourceSubfolderFileList="$(find "${SourceSubFolder}" -maxdepth 1 -not -path '*/\.*' -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
+        -iname "*.[Jj][Pp][Ee][Gg]" -or \
+        -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
+        ### Checking the number of fetched files before proceeding further
+        if [[ "${SourceSubfolderFileList[@]: -1}" != "" ]] ; then 
+          # Stripping out leading "./"
+          if [[ "${SourceSubFolder}" != "." ]] ; then SourceSubFolder="${SourceSubFolder#./}" ; fi
+          #### Displaying and logging the actions for the root of Source
+          if [[ "${SourceSubFolder}" == "." ]] ; then
+            printf "Transferring files from ${SourceSubFolder} in Source to Work-In-Progress ${WIPDirectoryPath}/${SourcePathBasename} directory for processing\n"
+            LogOutput+="Transferring files from ${SourceSubFolder} in Source to Work-In-Progress ${WIPDirectoryPath}/${SourcePathBasename} directory for processing\n"
+          #### Displaying and logging the actions for Source subfolders
+          else
+            printf "Transferring files from ${SourceSubFolder} in Source to Work-In-Progress ${WIPDirectoryPath}/${SourceSubFolder} directory for processing\n"
+            LogOutput+="Transferring files from ${SourceSubFolder} in Source to Work-In-Progress ${WIPDirectoryPath}/${SourceSubFolder} directory for processing\n"
+          fi
+          #### Creating subfolder in Work-In-Progress directory for file processing, piping errors to NULL
+          if [[ "${SourceSubFolder}" == "." ]] ; then
+            if ( ! mkdir -p "${WIPDirectoryPath}/${SourcePathBasename}" >/dev/null 2>&1 ) ; then
+              printf "Critical Error! Could not write ${SourceSubFolder}. Directory ${WIPDirectoryPath}/${SourcePathBasename} does not appear to be writable.\n"
+              LogOutput+="Critical Error! Could not write ${SourceSubFolder}. Directory ${WIPDirectoryPath}/${SourcePathBasename} does not appear to be writable.\n"
+              LogDumper "${LogOutput}"
+            fi
+          else
+            if ( ! mkdir -p "${WIPDirectoryPath}/${SourceSubFolder}" >/dev/null 2>&1 ) ; then
+              printf "Critical Error! Could not write ${SourceSubFolder}. Directory ${WIPDirectoryPath}/${SourceSubFolder} does not appear to be writable.\n"
+              LogOutput+="Critical Error! Could not write ${SourceSubFolder}. Directory ${WIPDirectoryPath}/${SourceSubFolder} does not appear to be writable.\n"
+              LogDumper "${LogOutput}"
+            fi
+          fi
+          # Taking one file at a time and processing it
+          #
+          # File path composition
+          #   SourceFileAbsolutePath = SourceDirectoryPath + SourceFileBasename, where
+          #     SourceFileBasename = SourceFileName + SourceFileExtension
+          #
+          for SourceSubfolderFile in ${SourceSubfolderFileList[@]}; do
+            #### Note, each file is in ./SubFolder/SubFolerFile format
+            ####
+            #### Stripping out leading "./" from each file, i.e. converting to SubFolder/SubFolerFile
+            SourceSubfolderFile="${SourceSubfolderFile#./}"
+            # Extracting file basename, i.e. converting to SubFolerFile
+            SourceSubfolderFile="$(basename "${SourceSubfolderFile}")"
+
+            SourceFileAbsolutePath="${SourcePath}/${SourceSubFolder}/${SourceSubfolderFile}"
+            # Ensure the file exists, then proceed with processing
+            # "-e file" returns true if file exists
+            # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
+            # ${#VAR} calculates the number of characters in a variable
+            if [ -f "${SourceFileAbsolutePath}" ] && [ "${#SourceFileAbsolutePath}" != 0 ] ; then
+              # Extracting path from source absolute path
+              SourceDirectoryPath="$(dirname "${SourceFileAbsolutePath}")"
+              # Extracting file basename from source absolute path
+              SourceFileBasename="$(basename "${SourceFileAbsolutePath}")"
+              # Substituting characters in file basename, the script chokes on "[" and "]" characters
+              SourceFileBasename="${SourceFileBasename//[/(}"
+              SourceFileBasename="${SourceFileBasename//]/)}"
+              # Extracting file name
+              SourceFileName="${SourceFileBasename%.*}"
+              # Extracting file extension
+              SourceFileExtension="${SourceFileBasename##*.}"
+              # Forming Work-In-Progress file path
+              if [[ "${SourceSubFolder}" == "." ]] ; then
+                WIPFileAbsolutePath="${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileBasename}"
+              else
+                WIPFileAbsolutePath="${WIPDirectoryPath}/${SourceSubFolder}/${SourceFileBasename}"
+              fi
+              # Transferring file from source to Work-In-Progress directory, piping errors to NULL
+              if ( ! "${CopyMove}" "${SourceFileAbsolutePath}" "${WIPFileAbsolutePath}" >/dev/null 2>&1 ) ; then
+                printf "Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
+                LogOutput+="Something went wrong! ${SourceFileAbsolutePath} could not be transferred\n"
+                # Counting failed operations with files
+                ((SourceFileMoveFailureCount+=1))
+              else
+                # Counting successful operations with files
+                ((SourceFileMoveSuccessCount+=1))
+              fi
+            else
+              printf "Something went wrong! File ${SourceFileAbsolutePath} could not be found!\n"
+              LogOutput+="Something went wrong! File ${SourceFileAbsolutePath} could not be found!\n"
+              # Counting files that could not be found
+              ((SourceFileNotFoundCount+=1))
+            fi
+          done
+        fi
       fi
-    else
-      printf "Something went wrong! File ${SourceFileAbsolutePath} could not be found!\n"
-      LogOutput+="Something went wrong! File ${SourceFileAbsolutePath} could not be found!\n"
-      # Counting files that could not be found
-      ((SourceFileNotFoundCount+=1))
-    fi
-  done
+    done
+  fi
   printf "${SourceFileMoveSuccessCount} files have been transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
   printf "${SourceFileMoveFailureCount} files could not be transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
   printf "${SourceFileNotFoundCount} files could not be found in Source ${SourcePath} folder\n"
@@ -776,7 +828,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   ## Taking operations timer snapshot
   OperationsTimerStart=$(date +%s%3N)
   # Searching for files with specific video and image extensions in Work-In-Progress directory
-  WIPFileList="$(find "${WIPDirectoryPath}" -maxdepth 1 -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
+  WIPFileList="$(find "${WIPDirectoryPath}" -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
   -iname "*.[Jj][Pp][Ee][Gg]" -or \
   -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
   ## Taking operations timer snapshot, counting and registering operations timing
@@ -821,7 +873,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
       CreateDateExtraction=0
       FileSystemAttributeExtraction=0
       # Extracting path from Work-In-Progress absolute path
-      WIPDirectoryPath="$(dirname "${WIPSortedFileAbsolutePath}")"
+      #WIPDirectoryPath="$(dirname "${WIPSortedFileAbsolutePath}")"
       # Extracting file basename from Work-In-Progress absolute path
       WIPFileBasename="$(basename "${WIPSortedFileAbsolutePath}")"
       # Extracting file name base
@@ -1307,18 +1359,34 @@ else
   printf "No files have been moved to WIP $WIPDirectoryPath.\n"
   LogOutput+="No files have been moved to WIP $WIPDirectoryPath.\n"
 fi
-# At this stage all the files in the Work-In-Progress directory have been processed and moved to other locations
-# Removing empty Work-In-Progress directory, piping errors to NULL
+# At this stage all the files in the Work-In-Progress directory and its subfolders have been processed and moved to other locations
 
+# Removing empty Work-In-Progress subfolders followed by WIP directory removal, piping errors to NULL
+printf "Cleaning up Work-In-Progress '${WIPDirectoryPath}'\n"
+LogOutput+="Cleaning up Work-In-Progress '${WIPDirectoryPath}'\n"
+WIPFolderList="$(find "${WIPDirectoryPath}" -type d | sort -rn)"
+## Confirming the folder list is not empty, ${#VAR} calculates the number of characters in a variable
+WIPSubFolderRemovalFailed=0
+if [ "${#WIPFolderList}" != 0 ] ; then
+  for WIPSubFolder in ${WIPFolderList[@]} ; do
+    printf "Attempting to remove '${WIPSubFolder}'\n"
+    LogOutput+="Attempting to remove '${WIPSubFolder}'\n"
+    if ( ! rmdir "${WIPSubFolder}" >/dev/null 2>&1 ) ; then
+      printf "Error while removing directory! Directory ${WIPSubFolder} does not appear to be empty or lock is in place. Exiting now.\n"
+      LogOutput+="Error while removing directory! Directory ${WIPSubFolder} does not appear to be empty or lock is in place.\n"
+      WIPSubFolderRemovalFailed=1
+    fi
+  done
+fi
+
+if [[ ${WIPSubFolderRemovalFailed} -eq 1 ]] ; then
+  printf "Error while removing directory! Directory ${WIPDirectoryPath} or its subfolder does not appear to be empty or lock is in place. Exiting now.\n"
+  LogOutput+="Error while removing directory! Directory ${WIPDirectoryPath} or its subfolder does not appear to be empty or lock is in place.\n"
+else
+  printf "Directory '${WIPDirectoryPath}' and all its subfolders have been removed successfully. End of programme.\n"
+  LogOutput+="Directory '${WIPDirectoryPath}' and all its subfolders have been removed successfully. End of programme.\n"
+fi
 # Unsetting Internal Field Separator (IFS)
 unset IFS
-
-if ( ! rmdir "$WIPDirectoryPath" >/dev/null 2>&1 ) ; then
-  printf "Error while removing directory! Directory $WIPDirectoryPath does not appear to be empty or lock is in place. Exiting now.\n"
-  LogOutput+="Error while removing directory! Directory $WIPDirectoryPath does not appear to be empty or lock is in place.\n"
-  LogDumper "${LogOutput}"
-else
-  printf "Directory $WIPDirectoryPath has been removed successfully. End of programme.\n"
-  LogOutput+="Directory $WIPDirectoryPath has been removed successfully. End of programme.\n"
-  LogDumper "${LogOutput}"
-fi
+# Exiting now
+LogDumper "${LogOutput}"
