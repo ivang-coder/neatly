@@ -1,5 +1,5 @@
-# rEXIFier Readme
-rEXIFier is a Shell-written EXIF-based media file processor with sort and deduplication features.
+# Neatly-Sorted Readme
+Neatly-Sorted is a Shell-written EXIF-based media file processor with sort and deduplication features.
 
 ## Overview
 The script processes media files (i.e. jpg, jpeg, mp4, mpg and mov) and it uses EXIFTOOL to extract "SubSecCreateDate", "CreateDate" and "Model" metadata. Depending on the selected options, the processed files are moved to "Destination" location with a chosen directory sturucture.
@@ -39,11 +39,11 @@ Use the commands below to install exiftool
 ## File Processing Overview
 
 ### Step 1. Confirm read-write access and create directories
-**Notification file at Source:** ```/SourceDirectory/monitoried-by-rEXIFier.info```  
+**Notification file at Source:** ```/SourceDirectory/monitoried-by-Neatly-Sorted.info```  
 **Work-In-Progress (WIP) folder at Source:** ```/SourceDirectory/WIP-YYYYMMDD-HHmmss```  
 **Duplicates folder at Destination:** ```/DestinationDirectory/Duplicates```  
 **Unverified folder at Destination:** ```/DestinationDirectory/Unverified```  
-**Log file at Destination:** ```/DestinationDirectory/rEXIFier-YYYYMMDD.log```  
+**Log file at Destination:** ```/DestinationDirectory/neatly-sorted-YYYYMMDD.log```  
 
 ### Step 2. Search media files (i.e. jpg, jpeg, mp4, mpg and mov) in Source Directory, include subfolders (3 levels deep) if Crawl is enabled.  
 ```Note! Hidden files and folders (prefixed with '.') are excluded from the search scope. Example: /my-location/.my-hidden-image.jpg```  
@@ -81,7 +81,7 @@ Use the commands below to install exiftool
 ```/DestinationDirectory/Unverified/my-picture-UVRFD000.jpg.```
 
 ### Step 5. Prepare (create) log file
-**/DestinationDirectory/rEXIFier-<YYYYMMDD>.log**
+**/DestinationDirectory/neatly-sorted-<YYYYMMDD>.log**
 
 ### Step 6. Prepare and move the WIP files to Destination location with the chosen folder structure
 **Destination files sort-by options:**  
@@ -106,7 +106,7 @@ An example with YM (/YEAR/MONTH/) folder structure
 ├── Unverified/    
 │   ├── my_image-UVRFD000.jpg  
 │   └── my_image-UVRFD001.jpg  
-└── rEXIFier-20210513.log
+└── neatly-sorted-20210513.log
 
 ### Step 7. WIP directory cleanup
 **WIP subfolder removal:** deleting all empty subfolders location in Work-In-Progress directory if Crawl is enabled  
@@ -117,9 +117,9 @@ An example with YM (/YEAR/MONTH/) folder structure
 **Logging and exiting:** writing the processing results (state) to the log file and exiting  
 
 ## Help menu
-**Help:** for more parameters use '/bin/bash rEXIFier.sh <-h|--help>'
+**Help:** for more parameters use '/bin/bash neatly-sorted.sh <-h|--help>'
 
-**Usage:** '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>  <--timerON|--timerOFF> <--crawlON|--crawlOFF>  
+**Usage:** '/bin/bash neatly-sorted.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>  <--timerON|--timerOFF> <--crawlON|--crawlOFF>  
     
 &nbsp;&nbsp;Mandatory parameters: **source-path**, **destination-path**
 
@@ -158,20 +158,20 @@ An example with YM (/YEAR/MONTH/) folder structure
 
 ## Usage and examples
 The command below will search for files at Source Media Location including subfolders (3 levels deep) and **move** files from "upload" to Destination Media Location keeping all files under "archive" with sorting by Year. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
-```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/```  
+```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/```  
 &nbsp;&nbsp;It would be equivalent to the command below:  
-```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move --timerOFF --crawlON```  
+```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move --timerOFF --crawlON```  
 
 The command below will search for files in the root of Source Media Location only, i.e. no subfolders, and **copy** files from "upload" to Destination Media Location keeping all files under "archive" with no sorting by Year or Month or Day. File renaming will be done using EXIF metadata only. File extension case will be UnChanged:  
-```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ExT --NoFSAttribute --NOSORT --copy --crawlOFF```  
+```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ExT --NoFSAttribute --NOSORT --copy --crawlOFF```  
 
 The command below will search for files in the root of Source Media Location only, i.e. no subfolders, and **copy** files from "upload" to Destination Media Location keeping all files under "archive" with sorting by Year and Month. File renaming will be done using EXIF metadata and File System attributes. File extension case will be changed to UPPERCASE:  
-```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --EXT --YM --copy --FSAttribute --crawlOFF```  
+```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --EXT --YM --copy --FSAttribute --crawlOFF```  
 
 The command below will search for files at Source Media Location including subfolders (3 levels deep) and **move** files from "upload" to Destination Media Location keeping all files under "archive/all" with no file sorting, i.e. the result will be a pile of deduplicated files in the "all" folder. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
-```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --NOSORT```  
+```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --NOSORT```  
 &nbsp;&nbsp;It would be equivalent to the command below:  
-```/bin/bash /Script-Location/rEXIFier.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --NOSORT --move --timerOFF```  
+```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --NOSORT --move --timerOFF```  
 
 ## Use cases
 ### Automated file processing with an out-of-support (EOL) NAS QNAP TS-210 or TS-212
@@ -213,19 +213,19 @@ Once NAS is restarted, log in to CLI via SSH, "opkg" command should be available
 ```
 ##### Step 7. Script deployment  
 **Create directory (do not use /opt, it is reserved for package managers and other QNAP-specific stuff):** ```# mkdir /apps && cd /apps```  
-**Download the script:** ```# wget https://github.com/ivang-coder/rexifier/archive/refs/heads/master.zip --no-check-certificate```  
-**Unpack the archive:** ```# unzip master.zip && mv rexifier-master/ rexifier```  
-**Change permissions:** ```# chmod +x /apps/rexifier/rEXIFier.sh```  
-**Script manual run:** ```# /opt/bin/bash /apps/rexifier/rEXIFier.sh /share/Media\ Upload/ /share/Media\ Archive/ --copy```  
+**Download the script:** ```# wget https://github.com/ivang-coder/neatly-sorted/archive/refs/heads/master.zip --no-check-certificate```  
+**Unpack the archive:** ```# unzip master.zip && mv neatly-sorted-master/ neatly-sorted```  
+**Change permissions:** ```# chmod +x /apps/neatly-sorted/neatly-sorted.sh```  
+**Script manual run:** ```# /opt/bin/bash /apps/neatly-sorted/neatly-sorted.sh /share/Media\ Upload/ /share/Media\ Archive/ --copy```  
 
 ##### Step 8. Script automation
 The script run can be event-driven or scheduled. Due to TS-210/TS-212 platform hardware limitations, running a container for the event-driven approach does not sound reasonable. For simplicity the script will be scheduled to run daily at 23:23 via Cron.
 
 **Important!** Due to the way the QNAP firmware updates crontab, do not use "crontab -e" as it will be overwritten on the next reboot. Use "vi /etc/config/crontab" instead.  
 **Open crontab for editing:** ```# vi /etc/config/crontab```  
-**Add crontab task:** ```23 23 * * * /opt/bin/bash /apps/rexifier/rEXIFier.sh /share/Media\ Upload/ /share/Media\ Archive/```  
+**Add crontab task:** ```23 23 * * * /opt/bin/bash /apps/neatly-sorted/neatly-sorted.sh /share/Media\ Upload/ /share/Media\ Archive/```  
 **Apply new crontab:** ```# crontab /etc/config/crontab && /etc/init.d/crond.sh restart```  
-**Verify crontab:** ```# crontab -l``` **Expected outcome:** ```23 23 * * * /opt/bin/bash /apps/rexifier/rEXIFier.sh /share/Media\ Upload/ /share/Media\ Archive/```  
+**Verify crontab:** ```# crontab -l``` **Expected outcome:** ```23 23 * * * /opt/bin/bash /apps/neatly-sorted/neatly-sorted.sh /share/Media\ Upload/ /share/Media\ Archive/```  
 
 ## Credits, tips and source of inspiration  
 **Photo processing** https://stackoverflow.com/questions/32062159/how-retrieve-the-creation-date-of-photos-with-a-script  

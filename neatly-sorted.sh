@@ -350,7 +350,7 @@ LogDumper(){
 
 # Prerequisite Checks begins
 #
-# Checking for absence of other running rEXIFier instances and excluding the "grep" from the output and counting the number of lines
+# Checking for absence of other running neatly-sorted instances and excluding the "grep" from the output and counting the number of lines
 InstanceCount="$(ps -ef | grep "${InstanceNameBase}" | grep -v grep | wc -l)"
 # In a common scenario "ps" command will be running in a child process (sub-shell) 
 # with the name matching the script name, hence we're checking if there are
@@ -636,7 +636,7 @@ fi
 
 # Forming various names
 #
-# Forming log filename name in rexifier-YYYYMMDD.log format
+# Forming log filename name in neatly-sorted-YYYYMMDD.log format
 LogFileName="${InstanceNameBase}-${LogFileDate}.log"
 # Forming Work-In-Progress directory name in WIP-YYYYMMDD-HHmmss format
 WIPDirectoryName="WIP-${WIPDirectoryDate}"
