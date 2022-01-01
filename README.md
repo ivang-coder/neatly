@@ -46,7 +46,7 @@ Use the commands below to install exiftool
 **Log file at Destination:** ```/DestinationDirectory/rEXIFier-YYYYMMDD.log```  
 
 ### Step 2. Search media files (i.e. jpg, jpeg, mp4, mpg and mov) in Source Directory, include subfolders (3 levels deep) if Crawl is enabled.  
-```Note! Hidden files and folders (prefixed with '.') are excluded from the search scope. Example: /my-location/.my-hidden-image.jpg```
+```Note! Hidden files and folders (prefixed with '.') are excluded from the search scope. Example: /my-location/.my-hidden-image.jpg```  
 **/SourceDirectory/**  
 ├── subfolder01/  
 │   └── file13.mov  
@@ -65,11 +65,11 @@ Use the commands below to install exiftool
 ├── subfolder02/  
 │   └── file23.mov  
 └── SourceDirectoryName/  
-    ├── file01.jpg  
-    ├── file02.jpeg  
-    ├── file03.mov  
-    ├── file04.jpeg  
-    └── file05.mov
+        ├── file01.jpg  
+        ├── file02.jpeg  
+        ├── file03.mov  
+        ├── file04.jpeg  
+        └── file05.mov
 
 ### Step 4. Create directories at Destination location
 **/DestinationDirectory/Duplicates**  
@@ -120,6 +120,7 @@ An example with YM (/YEAR/MONTH/) folder structure
 **Help:** for more parameters use '/bin/bash rEXIFier.sh <-h|--help>'
 
 **Usage:** '/bin/bash rEXIFier.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>  <--timerON|--timerOFF> <--crawlON|--crawlOFF>  
+    
 &nbsp;&nbsp;Mandatory parameters: **source-path**, **destination-path**
 
 **Source** absolute path is required with leading '/'. Alternatively use '.' for current directory.  
