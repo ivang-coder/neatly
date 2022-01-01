@@ -10,4 +10,5 @@
 #   20211221 v1.4: paths with whitespace and other special characters now supported
 #   20211225 v1.5: copy-move feature added, new "All" destination folder structure option added
 #   20211229 v1.6: operations timing feature added for performance monitoring and debugging
+#   20220101 v1.7: crawl feature added to search for files in Source and its subfolders
 #=======================================================================

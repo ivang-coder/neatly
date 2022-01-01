@@ -1,11 +1,8 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.6
-# Date: 2021-12-29
-
-# TODO
-# subfolder crawler
+# Version: v1.7
+# Date: 2022-01-01
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -36,6 +33,8 @@ CopyMove="mv"
 # Setting operations timer: <ON>, <OFF> (default)
 OperationsTimer="OFF"
 OperationsTimerLog="Operations timing (ms):\n"
+# Setting crawl: <ON> depth level 3 (default), <OFF>
+CrawlDepth="3"
 # Setting variables
 LogDate="$(date +%Y%m%d-%H%M%S)"
 WIPDirectoryDate="${LogDate}"
@@ -47,15 +46,16 @@ LogOutput+="${LogDate}\n"
 # Help options
 #=======================================================================
 HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help>'\n"
-UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move> <--timerON|--timerOFF>\n  Mandatory parameters: source-path, destination-path\n"
+UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move> <--timerON|--timerOFF> <--crawlON|--crawlOFF>\n  Mandatory parameters: source-path, destination-path\n"
 SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n  Example: '/home/username/pictures/'\n"
 DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n  Example: '/mystorage/sorted-pictures/'\n"
 ExtensionTip="Extension case switch options: \n  --ExT = unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n  --EXT = uppercase, i.e. jpeg > JPEG \n  --ext (default) = lowercase, i.e. JPEG > jpeg\n"
 FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\n  If enabled with --FSAttribute, it can cause conflicts and affect file sorting.\n  --NoFSAttribute (default) is the recommended option.\n"
-YMDTip="Destination files sorted by:\n  --YMD = YEAR/MONTH/DAY/picture.jpg, i.e. 2021/05/10/picture.jpg\n  --YM (default) = YEAR/MONTH/picture.jpg, i.e. 2021/05/picture.jpg\n  --Y = YEAR, i.e. 2021/picture.jpg\n  --NOSORT = All (Custom), i.e. Destination/All\n"
+YMDTip="Destination files sort-by options:\n  --YMD = YEAR/MONTH/DAY/picture.jpg, i.e. 2021/05/10/picture.jpg\n  --YM (default) = YEAR/MONTH/picture.jpg, i.e. 2021/05/picture.jpg\n  --Y = YEAR, i.e. 2021/picture.jpg\n  --NOSORT = All (Custom), i.e. Destination/All\n"
 CopyMoveTip="Source to Work-In-Progress (WIP) file transfer mode: \n  --copy = copy files,\n  --move = move files (default)\n"
 OperationsTimerTip="Operations timer (monitoring, debug): \n  --timerON = display and log operation timings,\n  --timerOFF = do not display and log operation timings (default)\n"
-FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}${CopyMoveTip}${OperationsTimerTip}\n"
+CrawlTip="Crawl parameters: \n  --crawlON = process Source and its subfolders 3 levels deep (default),\n  --crawlOFF = process Source directory only, i.e. Source files at root with no subfolders\n"
+FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}${CopyMoveTip}${OperationsTimerTip}${CrawlTip}\n"
 
 # End of Forming help menu options
 
@@ -527,6 +527,16 @@ if [[ "${#}" -gt 2 ]] ; then
         # Setting the operations timer OFF, i.e. do not display and log operation timings
         OperationsTimer="OFF"
         ;;
+      # Checking if the argument is crawl switch and validating it
+      --crawlON)
+        # Setting the crawl ON, i.e. process Source and its subfolders 3 levels deep
+        CrawlDepth="3"
+        ;;
+      # Checking if the argument is crawl switch and validating it
+      --crawlOFF)
+        # Setting the crawl ON, i.e. process Source directory only, i.e. Source files at root with no subfolders
+        CrawlDepth="1"
+        ;;
       # Skipping if no expected parameter found
       *) 
         printf "Prerequisite Critical Error! Unexpected parameter detected: ${Argument}, ignoring it\n"
@@ -594,6 +604,16 @@ case "${OperationsTimer}" in
     LogOutput+="OFF\n"
     ;;
 esac
+LogOutput+="    Crawl mode: "
+case "${CrawlDepth}" in 
+  3)
+    LogOutput+="ON, Source and ${CrawlDepth} level deep\n"
+    ;;
+  1)
+    LogOutput+="OFF, Source root files only\n"
+    ;;
+esac
+
 # Printing the aggregate of parameters to the screen
 printf "${LogOutput}\n"
 #
@@ -672,7 +692,7 @@ OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerSt
 # Taking operations timer snapshot
 OperationsTimerStart=$(date +%s%3N)
 ### Confirming files with specific video and image extensions in source directory and its subfolders, ingoring hidden folders and files with leading "."
-SourceFileCheck="$(find "${SourcePath}" -not -path '*/\.*' -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
+SourceFileCheck="$(find "${SourcePath}" -maxdepth "${CrawlDepth}" -not -path '*/\.*' -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
 -iname "*.[Jj][Pp][Ee][Gg]" -or \
 -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
 ### Checking the number of fetched files before proceeding further
@@ -702,8 +722,10 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   SourceFileNotFoundCount=0
   ## Descending to the Source to get the list of subfolders with relative paths
   cd "${SourcePath}"
+  ## Changing CrawlDepth (maxdepth) due to the descend to Source if Crawl is enabled
+  CrawlDepth=$(( CrawlDepth - 1))
   ## Searching for folders in source directory
-  SourceFolderList="$(find . -not -path '*/\.*' -type d | sort -n)"
+  SourceFolderList="$(find . -maxdepth "${CrawlDepth}" -not -path '*/\.*' -type d | sort -n)"
   ## Confirming the folder list is not empty, ${#VAR} calculates the number of characters in a variable
   if [ "${#SourceFolderList}" != 0 ] ; then
     for SourceSubFolder in ${SourceFolderList[@]} ; do
