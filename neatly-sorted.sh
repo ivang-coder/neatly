@@ -1,8 +1,8 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.7
-# Date: 2022-01-01
+# Version: v1.7.2
+# Date: 2022-01-02
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -173,8 +173,8 @@ FSModifyTimeParser() {
 EXIFModelParser() {
   # Define a variable and pass the arguments
   EXIF_OUTPUT="${1}"
-  # Remove the dashes by substituting characters with nothing
-  EXIF_OUTPUT_SUBSTITUTE="${EXIF_OUTPUT//-/}"
+  # Remove colons by substituting characters with nothing
+  EXIF_OUTPUT_SUBSTITUTE="${EXIF_OUTPUT//:/}"
   MODEL="${EXIF_OUTPUT_SUBSTITUTE}"
 }
 
@@ -857,8 +857,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP file search: ${OperationsTimerResult}\n"
   ## Taking operations timer snapshot
   OperationsTimerStart=$(date +%s%3N)
-  # Older cameras create images/videos with DSC_XXXX.* file name format and
-  # usually without SubSecond metadata. 
+  # Older cameras create images/videos with non-unique file name format, like DSC_XXXX.*, and usually without SubSecond metadata. 
   #
   # Sorting file names in this case is the only option to keep images in the original sequence, 
   # especially when multiple pictures being taken in one second
@@ -894,33 +893,41 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
       SubSecCreateDateExtraction=0
       CreateDateExtraction=0
       FileSystemAttributeExtraction=0
-      # Extracting path from Work-In-Progress absolute path
-      #WIPDirectoryPath="$(dirname "${WIPSortedFileAbsolutePath}")"
       # Extracting file basename from Work-In-Progress absolute path
       WIPFileBasename="$(basename "${WIPSortedFileAbsolutePath}")"
       # Extracting file name base
       WIPFileName="${WIPFileBasename%.*}"
       # Extracting file extension
       WIPFileExtension="${WIPFileBasename##*.}"
-      # Make extension lowercase if ExtensionCaseSwitch is set to "ext"
+      # Change extension lowercase if ExtensionCaseSwitch is set to "ext"
       if [[ "${ExtensionCaseSwitch}" == 'ext' ]] ; then
         NormalisedFileExtension="$(echo "${WIPFileExtension}" | awk '{print tolower($0)}')"
       else
-      # Make extension uppercase if ExtensionCaseSwitch is set to "EXT"
+      # Change extension uppercase if ExtensionCaseSwitch is set to "EXT"
         if [[ "${ExtensionCaseSwitch}" == 'EXT' ]] ; then
           NormalisedFileExtension="$(echo "${WIPFileExtension}" | awk '{print toupper($0)}')"
         fi
       fi
       ## Taking operations timer snapshot
       OperationsTimerStart=$(date +%s%3N)
-      # Attempt to find an EXIF SubSecCreateDate from the file, if it exists.
-      EXIF_SubSecCreateDate_OUTPUT="$(exiftool -s -f -SubSecCreateDate "${WIPSortedFileAbsolutePath}" | awk '{print $3":"$4}')"
+      # Attempting to extract EXIF metadata from the file to an array.
+      EXIF_EXTRACT=( $(exiftool -s -f -SubSecCreateDate -CreateDate -Model "${WIPSortedFileAbsolutePath}" | awk '{print $3":"$4}') )
+      # Assigning the array values to variables
+      EXIF_SubSecCreateDate_OUTPUT="${EXIF_EXTRACT[0]}"
+      EXIF_CreateDate_OUTPUT="${EXIF_EXTRACT[1]}"
+      EXIF_Model_OUTPUT="${EXIF_EXTRACT[2]}"
+      ## Taking operations timer snapshot, counting and registering operations timing
+      OperationsTimerStop=$(date +%s%3N)
+      OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart ))
+      OperationsTimerLog+="  EXIF extraction: ${OperationsTimerResult}\n"
+
       # Perform sanity check on correctly extracted EXIF SubSecCreateDate
       if [[ "${EXIF_SubSecCreateDate_OUTPUT}" != -* ]] && [[ "${EXIF_SubSecCreateDate_OUTPUT}" != 0* ]] ; then
+        ## Taking operations timer snapshot
+        OperationsTimerStart=$(date +%s%3N)
         # Setting flag
         SubSecCreateDateExtraction=1
-        # Good data extracted, pass it to EXIFSubSecCreateDateParser to extract fields
-        # from the EXIF info
+        # Good data extracted, pass it to EXIFSubSecCreateDateParser to extract the fields from EXIF info
         EXIFSubSecCreateDateParser "${EXIF_SubSecCreateDate_OUTPUT}"
         # Check the extracted date for validity
         if [ "$(IsValidDate "${YEAR}" "${MONTH}" "${DAY}")" == 1 ]  ; then
@@ -929,8 +936,6 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
           DATE="InvalidDate"
           LogOutput+="No valid date was found, using ${DATE}.\n"
         fi
-        # Attempting to find an EXIF Model from the file, if it exists.
-        EXIF_Model_OUTPUT="$(exiftool -s -f -Model "${WIPSortedFileAbsolutePath}" | awk '{print $3"-"$4}')"
         # Perform sanity check on correctly extracted EXIF Model
         if [[ "${EXIF_Model_OUTPUT}" != -* ]] ; then
           # Good data extracted, pass it to EXIFModelParser to extract fields
@@ -943,14 +948,12 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
         ## Taking operations timer snapshot, counting and registering operations timing
         OperationsTimerStop=$(date +%s%3N)
         OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart ))
-        OperationsTimerLog+="  EXIF SubSecCreateDate and Model extraction: ${OperationsTimerResult}\n"
+        OperationsTimerLog+="  EXIF SubSecCreateDate and Model verification: ${OperationsTimerResult}\n"
       fi
       # Proceed with CreateDate if SubSecCreateDate extraction failed
       if [[ ${SubSecCreateDateExtraction} -eq 0 ]] ; then
         ## Taking operations timer snapshot
         OperationsTimerStart=$(date +%s%3N)
-        # Attempt to find an EXIF CreateDate from the file, if it exists.
-        EXIF_CreateDate_OUTPUT="$(exiftool -s -f -CreateDate "${WIPSortedFileAbsolutePath}" | awk '{print $3":"$4}')"
         # Perform sanity check on correctly extracted EXIF CreateDate
         if [[ "${EXIF_CreateDate_OUTPUT}" != -* ]] && [[ "${EXIF_CreateDate_OUTPUT}" != 0* ]] ; then
           # Setting flag
@@ -965,8 +968,6 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
             DATE="InvalidDate"
             LogOutput+="No valid date was found, using ${DATE}.\n"
           fi
-          # Attempting to find an EXIF Model from the file, if it exists.
-          EXIF_Model_OUTPUT="$(exiftool -s -f -Model "${WIPSortedFileAbsolutePath}" | awk '{print $3"-"$4}')"
           # Perform sanity check on correctly extracted EXIF Model
           if [[ "${EXIF_Model_OUTPUT}" != -* ]] ; then
             # Good data extracted, pass it to EXIFModelParser to extract fields
@@ -979,7 +980,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
           ## Taking operations timer snapshot, counting and registering operations timing
           OperationsTimerStop=$(date +%s%3N)
           OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart ))
-          OperationsTimerLog+="  EXIF CreateDate and Model extraction: ${OperationsTimerResult}\n"
+          OperationsTimerLog+="  EXIF CreateDate and Model verification: ${OperationsTimerResult}\n"
         fi
       fi
       # Proceed with file attribute extraction if it is enabled and if all other attempts failed (SubSecCreateDate and CreateDate)
