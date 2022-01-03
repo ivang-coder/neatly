@@ -1,8 +1,8 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.7.2
-# Date: 2022-01-02
+# Version: v1.7.3
+# Date: 2022-01-03
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -710,7 +710,7 @@ LogOutput+="${OperationsTimerLog}"
 # Reset operations timing variable
 OperationsTimerLog="Operations timing (ms):\n"
 
-# Seaching and moving files from source to Work-In-Progress directory
+# Seaching and moving files from Source to Work-In-Progress directory
 if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   ## Taking operations timer snapshot
   OperationsTimerStart=$(date +%s%3N)
@@ -841,6 +841,65 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
 else
   printf "No files have been identified for processing in ${SourcePath}.\n"
   LogOutput+="No files have been identified for processing in ${SourcePath}.\n"
+fi
+
+# Beginning cleaning up in Source if "move" option is selected
+# Cleaning up Source by removing empty subfolders if "move" option is selected
+if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${CopyMove} == "mv" ]] ; then
+  ## Taking operations timer snapshot
+  OperationsTimerStart=$(date +%s%3N)
+  # Resetting variables
+  SourceEmptySubfolderFound=0
+  SourceSubFolderRemovalFailed=0
+  ## Searching for folders in source directory
+  SourceFolderList="$(find "${SourcePath}" -not -path '*/\.*' -type d | sort -rn)"
+  ## Confirming the folder list is not empty, ${#VAR} calculates the number of characters in a variable
+  if [ "${#SourceFolderList}" != 0 ] ; then
+    for SourceSubFolder in ${SourceFolderList[@]} ; do
+      ### Excluding Source and WIP directories from futher processing
+      if [[ "${SourceSubFolder}" != "${SourcePath}" ]] && [[ "${SourceSubFolder}" != *"${WIPDirectoryPath}"* ]]; then 
+        # Ensure the file exists, then proceed with processing
+        # "-e file" returns true if file exists
+        # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
+        # ${#VAR} calculates the number of characters in a variable
+        if [ -e "${SourceSubFolder}" ] && [ "${#SourceSubFolder}" != 0 ] ; then
+          ### Searching for files including the hidden one, i.e. with leading '.'
+          SourceSubfolderFileList="$(find "${SourceSubFolder}" -type f )"
+          ### Proceeding if zero files fetched
+          if [[ "${SourceSubfolderFileList[@]: -1}" == "" ]] ; then 
+            SourceEmptySubfolderFound=1
+            printf "Attempting to remove empty '${SourceSubFolder}'\n"
+            LogOutput+="Attempting to remove empty '${SourceSubFolder}'\n"
+              if ( ! rmdir "${SourceSubFolder}" >/dev/null 2>&1 ) ; then
+                SourceSubFolderRemovalFailed=1
+                printf "Error while removing supposedly empty subfolder! Directory '${SourceSubFolder}' does not appear to be empty or lock is in place.\n"
+                LogOutput+="Error while removing supposedly empty subfolder! Directory '${SourceSubFolder}' does not appear to be empty or lock is in place.\n"
+              fi
+          fi
+        fi
+      fi
+    done
+    if [[ ${SourceSubFolderRemovalFailed} -eq 1 ]] ; then
+      printf "Non-critical errors were detected while performing empty subfolder clean-up in ${SourcePath} directory.\n"
+      LogOutput+="Non-critical errors were detected while performing empty subfolder clean-up in ${SourcePath} directory.\n"
+    fi
+    if [[ ${SourceEmptySubfolderFound} -eq 1 ]] ; then
+      printf "Empty subfolder clean-up has been completed in '${SourcePath}' directory.\n"
+      LogOutput+="Empty subfolder clean-up has been completed in '${SourcePath}' directory.\n"
+      ## Taking operations timer snapshot, counting and registering operations timing
+      OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source empty subfolder clean-up: ${OperationsTimerResult}\n"
+      # Display operation timings
+      printf "${OperationsTimerLog}"
+      # Log operation timings
+      LogOutput+="${OperationsTimerLog}"
+      LogOutput+="#############################\n"
+      # Reset operations timing variable
+      OperationsTimerLog="Operations timing (ms):\n"
+    else
+      printf "No empty subfolders have been identified in '${SourcePath}' directory.\n"
+      LogOutput+="No empty subfolders have been identified in '${SourcePath}' directory.\n"
+    fi
+  fi
 fi
 
 # Begin file processing in Work-In-Progress directory
@@ -1388,14 +1447,15 @@ fi
 printf "Cleaning up Work-In-Progress '${WIPDirectoryPath}'\n"
 LogOutput+="Cleaning up Work-In-Progress '${WIPDirectoryPath}'\n"
 WIPFolderList="$(find "${WIPDirectoryPath}" -type d | sort -rn)"
-## Confirming the folder list is not empty, ${#VAR} calculates the number of characters in a variable
+# Resetting variables
 WIPSubFolderRemovalFailed=0
+## Confirming the folder list is not empty, ${#VAR} calculates the number of characters in a variable
 if [ "${#WIPFolderList}" != 0 ] ; then
   for WIPSubFolder in ${WIPFolderList[@]} ; do
     printf "Attempting to remove '${WIPSubFolder}'\n"
     LogOutput+="Attempting to remove '${WIPSubFolder}'\n"
     if ( ! rmdir "${WIPSubFolder}" >/dev/null 2>&1 ) ; then
-      printf "Error while removing directory! Directory ${WIPSubFolder} does not appear to be empty or lock is in place. Exiting now.\n"
+      printf "Error while removing directory! Directory ${WIPSubFolder} does not appear to be empty or lock is in place.\n"
       LogOutput+="Error while removing directory! Directory ${WIPSubFolder} does not appear to be empty or lock is in place.\n"
       WIPSubFolderRemovalFailed=1
     fi
@@ -1403,7 +1463,7 @@ if [ "${#WIPFolderList}" != 0 ] ; then
 fi
 
 if [[ ${WIPSubFolderRemovalFailed} -eq 1 ]] ; then
-  printf "Error while removing directory! Directory ${WIPDirectoryPath} or its subfolder does not appear to be empty or lock is in place. Exiting now.\n"
+  printf "Error while removing directory! Directory ${WIPDirectoryPath} or its subfolder does not appear to be empty or lock is in place.\n"
   LogOutput+="Error while removing directory! Directory ${WIPDirectoryPath} or its subfolder does not appear to be empty or lock is in place.\n"
 else
   printf "Directory '${WIPDirectoryPath}' and all its subfolders have been removed successfully. End of programme.\n"
