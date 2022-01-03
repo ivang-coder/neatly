@@ -704,9 +704,9 @@ fi
 ## Taking operations timer snapshot, counting and registering operations timing
 OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source file check search: ${OperationsTimerResult}\n"
 # Display operation timings
-printf "${OperationsTimerLog}"
+if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
 # Log operation timings
-LogOutput+="${OperationsTimerLog}"
+if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
 # Reset operations timing variable
 OperationsTimerLog="Operations timing (ms):\n"
 
@@ -832,9 +832,9 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   ## Taking operations timer snapshot, counting and registering operations timing
   OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source-to-WIP transfer: ${OperationsTimerResult}\n"
   # Display operation timings
-  printf "${OperationsTimerLog}"
+  if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
   # Log operation timings
-  LogOutput+="${OperationsTimerLog}"
+  if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
   LogOutput+="#############################\n"
   # Reset operations timing variable
   OperationsTimerLog="Operations timing (ms):\n"
@@ -889,9 +889,9 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${CopyMove} == "mv" ]] ; then
       ## Taking operations timer snapshot, counting and registering operations timing
       OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source empty subfolder clean-up: ${OperationsTimerResult}\n"
       # Display operation timings
-      printf "${OperationsTimerLog}"
+      if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
       # Log operation timings
-      LogOutput+="${OperationsTimerLog}"
+      if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
       LogOutput+="#############################\n"
       # Reset operations timing variable
       OperationsTimerLog="Operations timing (ms):\n"
@@ -924,10 +924,10 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   ## Taking operations timer snapshot, counting and registering operations timing
   OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP file sorting: ${OperationsTimerResult}\n"
   # Display operation timings
-  printf "${OperationsTimerLog}"
+  if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
   printf "########\n"
   # Log operation timings
-  LogOutput+="${OperationsTimerLog}"
+  if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
   LogOutput+="########\n"
   # Reset operations timing variable
   OperationsTimerLog="Operations timing (ms):\n"
