@@ -12,4 +12,5 @@
 #   20211229 v1.6: operations timing feature added for performance monitoring and debugging
 #   20220101 v1.7: crawl feature added to search for files in Source and its subfolders
 #   20220102 v1.7.2: EXIF extraction performance improvements
+#   20220103 v1.7.3: source empty subfolder clean-up added
 #=======================================================================
