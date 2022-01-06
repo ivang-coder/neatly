@@ -9,12 +9,12 @@ If EXIF attempts fail to read metadata, then the less reliable file attributes g
 In case file attribute extaction fails, the source filename gets amended by adding 'unverified' suffix in **"UVRFDXXX"** format, i.e. my-picture-UVRFD000.jpg.  
 The unverified files are placed in "Unverified" folder within "Destination" path, i.e. ```/my-destination/Unverified/my-picture-UVRFD000.jpg```
 
-## Compatibility
-**BASH:** v4+
-**CentOS/RHEL:** v7, v8
-**Ubuntu:** 18.04 LTS, 20.04.3 LTS
-**QNAP (Entware):** 4.2.6, opkg version 1bf042dd06751b693a8544d2317e5b969d666b69 (2021-06-13)
-**WSL (Windows Linux Subsystem):** Ubuntu (18.04 LTS, 20.04.3 LTS)
+## Compatibility  
+**BASH:** v4+  
+**CentOS/RHEL:** v7, v8  
+**Ubuntu:** 18.04 LTS, 20.04.3 LTS  
+**QNAP (Entware):** 4.2.6, opkg version 1bf042dd06751b693a8544d2317e5b969d666b69 (2021-06-13)  
+**WSL (Windows Linux Subsystem):** Ubuntu (18.04 LTS, 20.04.3 LTS)  
 
 ## Filename format
 Filename format depends on the chosen folder structure.  
