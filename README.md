@@ -2,7 +2,7 @@
 Neatly-Sorted is a Shell-written EXIF-based media file processor with sort and deduplication features.
 
 ## Intro
-If your NAS/JBOD has a pile of photos and video collected over the years and dumped to various folders with no or limited structure around sorting, naming convention, etc. Or maybe you just have a folder with a bunch of pictures that you'd like to organize a bit better.  
+If your NAS/JBOD has a pile of photos and videos made with various cameras and dumped to various folders with no or limited structure around sorting, naming convention, etc. Or maybe you just have a folder with a bunch of pictures collected over the years that you'd like to organize a bit better.  
 
 Your collection might contain files with name dupliates (i.e. if a camera uses non-date-based filename format, like "DSC_XXXXXX") as well as files with content duplicates (i.e. files that have been renamed by someone for convenience or by a system during file replication where "(01)" suffix is added).  
 
