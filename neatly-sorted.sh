@@ -1,8 +1,8 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.7.3
-# Date: 2022-01-03
+# Version: v1.7.4
+# Date: 2022-02-20
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -173,9 +173,12 @@ FSModifyTimeParser() {
 EXIFModelParser() {
   # Define a variable and pass the arguments
   EXIF_OUTPUT="${1}"
-  # Remove colons by substituting characters with nothing
-  EXIF_OUTPUT_SUBSTITUTE="${EXIF_OUTPUT//:/}"
-  MODEL="${EXIF_OUTPUT_SUBSTITUTE}"
+  # Remove colons, hypens, commas, etc by substituting characters with nothing
+  EXIF_OUTPUT="${EXIF_OUTPUT//-/}"
+  EXIF_OUTPUT="${EXIF_OUTPUT//,/}"
+  EXIF_OUTPUT="${EXIF_OUTPUT// /}"
+  EXIF_OUTPUT="${EXIF_OUTPUT//:/}"
+  MODEL="${EXIF_OUTPUT}"
 }
 
 # FileListSorter sorts the items in array alphabetically
@@ -694,6 +697,7 @@ OperationsTimerStart=$(date +%s%3N)
 ### Confirming files with specific video and image extensions in source directory and its subfolders, ingoring hidden folders and files with leading "."
 SourceFileCheck="$(find "${SourcePath}" -maxdepth "${CrawlDepth}" -not -path '*/\.*' -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
 -iname "*.[Jj][Pp][Ee][Gg]" -or \
+-iname "*.[Pp][Nn][Gg]" -or \
 -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
 ### Checking the number of fetched files before proceeding further
 if [[ "${SourceFileCheck[@]: -1}" == "" ]] ; then 
@@ -737,6 +741,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
         ### Searching for files with specific video and image extensions in source directory
         SourceSubfolderFileList="$(find "${SourceSubFolder}" -maxdepth 1 -not -path '*/\.*' -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
         -iname "*.[Jj][Pp][Ee][Gg]" -or \
+        -iname "*.[Pp][Nn][Gg]" -or \
         -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
         ### Checking the number of fetched files before proceeding further
         if [[ "${SourceSubfolderFileList[@]: -1}" != "" ]] ; then 
@@ -911,6 +916,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   # Searching for files with specific video and image extensions in Work-In-Progress directory
   WIPFileList="$(find "${WIPDirectoryPath}" -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
   -iname "*.[Jj][Pp][Ee][Gg]" -or \
+  -iname "*.[Pp][Nn][Gg]" -or \
   -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
   ## Taking operations timer snapshot, counting and registering operations timing
   OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  WIP file search: ${OperationsTimerResult}\n"
@@ -1109,7 +1115,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
 
       if [[ "${UNVERIFIED}" -eq 1 ]] ; then
         # Re-forming the File Name by appending UVRFD000 was done before
-        # Just a reminder what Formated File Name is FormatedFileName=${WIPFileName}-UVRFD000.${WIPFileExtension}
+        # Just a reminder that Formated File Name is FormatedFileName=${WIPFileName}-UVRFD000.${WIPFileExtension}
         #
         # Checking if Destination FileName exists
         # "-e file" returns true if file exists
