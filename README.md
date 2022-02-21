@@ -2,7 +2,7 @@
 Neatly-Sorted is a Shell-written EXIF-based media file processor with sort and deduplication features.
 
 ## Intro
-If your NAS/JBOD has a pile of photos and videos made with various cameras and dumped to various folders with no or limited structure around sorting, naming convention, etc. Or maybe you just have a folder with a bunch of pictures collected over the years that you'd like to organize a bit better.  
+What if your NAS/JBOD has a pile of photos and videos made with a variety of cameras and dumped to various folders with no or limited structure around sorting, naming convention, etc. Or maybe you just have a folder with a bunch of pictures collected over the years that you'd like to organize a bit better.  
 
 Your collection might contain files with name dupliates (i.e. if a camera uses non-date-based filename format, like "DSC_XXXXXX") as well as files with content duplicates (i.e. files that have been renamed by someone for convenience or by a system during file replication where "(01)" suffix is added).  
 
@@ -10,8 +10,12 @@ Neatly-Sorted might be a solution you're looking for. The script is intended to 
 Neatly-sorted has been tested and used on various systems, however it is designed with "older systems" in mind, i.e. ARM-based QNAP NAS TS-210
 
 ## Overview
-The script processes media files (i.e. jpg, jpeg, mp4, mpg and mov) and it uses EXIFTOOL to extract "SubSecCreateDate", "CreateDate" and "Model" metadata. The extracted metadata is then used to form a filename in **"MODEL-DATE-SECONDS-SUBSECONDS.EXTENSION"** format. Depending on the selected options, the processed files are transferred to "Destination" location with a chosen directory sturucture, i.e.  
+The script processes media files (i.e. jpg, jpeg, mp4, mpg and mov) and it uses EXIFTOOL to extract "SubSecCreateDate", "CreateDate" and "Model" metadata. The extracted metadata is then used to form a filename in **"DATE-SECONDS-SUBSECONDS.EXTENSION"** format, where **MODEL** can be optionally added. Depending on the selected options, the processed files are transferred to "Destination" location with a chosen directory sturucture, i.e.  
+```/my-destination/{Directory Structure}/20200613-125351-184775-ONEPLUSA5000.jpg```  
+or  
 ```/my-destination/{Directory Structure}/ONEPLUSA5000-20200613-125351-184775.jpg```  
+or  
+```/my-destination/{Directory Structure}/20200613-125351-184775.jpg```  
 
 **Directory structure options:**  
 - YEAR/MONTH/DAY, i.e. /2021/05/10/picture.jpg  
@@ -19,18 +23,18 @@ The script processes media files (i.e. jpg, jpeg, mp4, mpg and mov) and it uses 
 - Y (default) = YEAR, i.e. /2021/picture.jpg  
 - All (no sort), i.e. Destination/All/picture.jpg  
 
-If "Model" metadata is not available, the MODEL file prefix is replaced with "CAMERA". 
+If "Model" metadata is not available, the MODEL element is replaced with the word "CAMERA". 
 
 In case the Destination already contains a file with the same name, i.e. a duplicate (verified with sha512 hash), the file is moved to the "Duplicates" folder with appending the filename with DUPXXX suffix, i.e.  
-```/my-destination/Duplicates/ONEPLUSA5000-20200613-125351-184775-DUP000.jpg```  
+```/my-destination/Duplicates/20200613-125351-184775-DUP000.jpg```  
 
 Duplicate search is also performed in the Duplicates folder to avoid overwriting the "original" duplicate. This is done to allow duplicates' review and prevent unsolicited changes/replacements.  
 **Duplicates folder example:**  
 ├── my-destination/Duplicates/  
-│   ├── E6533-20211205-001132-000000-DUP000.jpg  
-│   ├── E6533-20211205-001132-000000-DUP001.jpg  
-│   ├── ONEPLUSA5000-20200613-125351-184775-DUP000.jpg  
-│   └── ONEPLUSA5000-20200613-125351-184775-DUP001.jpg  
+│   ├── 20211205-001132-000000-DUP000.jpg  
+│   ├── 20211205-001132-000000-DUP001.jpg  
+│   ├── 20200613-125351-184775-DUP000.jpg  
+│   └── 20200613-125351-184775-DUP001.jpg  
 
 If EXIF attempts fail to read metadata, then the less reliable file attributes get extracted by swithing on the appropriate option.
 
@@ -45,11 +49,15 @@ The unverified files are placed in "Unverified" folder within "Destination" path
 **WSL (Windows Linux Subsystem):** Ubuntu (18.04 LTS, 20.04.3 LTS)  
 
 ## Filename format
-The "Model", "SubSecCreateDate" and "CreateDate" metadata is used to form a filename in **"MODEL-DATE-SECONDS-SUBSECONDS.EXTENSION"** format.  
-```Example: ONEPLUSA5000-20200613-125351-184775.jpg```
+The "Model", "SubSecCreateDate" and "CreateDate" metadata is used to form a filename in **"DATE-SECONDS-SUBSECONDS.EXTENSION"** format, where **MODEL** can be optionally added.  
+```Example: 20200613-125351-184775-DMCFZ8.jpg```  
+or  
+```Example: DMCFZ8-20200613-125351-184775.jpg```  
+or  
+```Example: 20200613-125351-184775.jpg```  
 
 In case the files are produced by a camera that does not create **"SubSecCreateDate"** field in metadata, the expected filename format: **MODEL-DATE-SECONDS-000000.EXTENSION**  
-```Example: E6533-20211205-001132-000000.jpg```
+```Example: 20211205-001132-000000.jpg```
 
 ## Prerequisites 
 Use the commands below to install exiftool  
@@ -96,7 +104,7 @@ Use the commands below to install exiftool
 ### Step 4. Create directories at Destination location
 **/DestinationDirectory/Duplicates**  
 &nbsp;&nbsp;directory for duplicate files where **"DUPXXX"** suffix is added to the filenames, i.e.  
-```/DestinationDirectory/Duplicates/MODEL-DATE-SECONDS-DUP000.jpg.```
+```/DestinationDirectory/Duplicates/DATE-SECONDS-DUP000.jpg.```
 
 **/DestinationDirectory/Unverified**  
 &nbsp;&nbsp;directory for the files for which metadata could not be retrieved where the filenames get amended by adding 'unverified' suffix in **"UVRFDXXX"** format, i.e.  
@@ -116,15 +124,15 @@ An example with YM (/YEAR/MONTH/) folder structure
 /DestinationDirectory/  
 ├── 2020/  
 │   └── 05/  
-│       └── CAMERA-20200502-021042-0173502.mov  
+│       └── 20200502-021042-0173502.mov  
 ├── 2021/  
 │   └── 11/  
-│       └── E6533-20211104-001437-000000.jpeg  
+│       └── 20211104-001437-000000.jpeg  
 ├── Duplicates/  
-│   ├── E6533-20211205-001132-000000-DUP000.jpg  
-│   ├── E6533-20211205-001132-000000-DUP001.jpg  
-│   ├── ONEPLUSA5000-20200613-125351-184775-DUP000.jpg  
-│   └── ONEPLUSA5000-20200613-125351-184775-DUP001.jpg  
+│   ├── 20211205-001132-000000-DUP000.jpg  
+│   ├── 20211205-001132-000000-DUP001.jpg  
+│   ├── 20200613-125351-184775-DUP000.jpg  
+│   └── 20200613-125351-184775-DUP001.jpg  
 ├── Unverified/    
 │   ├── my_image-UVRFD000.jpg  
 │   └── my_image-UVRFD001.jpg  
@@ -141,7 +149,7 @@ An example with YM (/YEAR/MONTH/) folder structure
 ## Help menu
 **Help:** for more parameters use '/bin/bash neatly-sorted.sh <-h|--help>'
 
-**Usage:** '/bin/bash neatly-sorted.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>  <--timerON|--timerOFF> <--crawlON|--crawlOFF>  
+**Usage:** '/bin/bash neatly-sorted.sh <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move>  <--timerON|--timerOFF> <--crawlON|--crawlOFF> <--DateModel|--ModelDate|--NoModel>  
     
 &nbsp;&nbsp;Mandatory parameters: **source-path**, **destination-path**
 
@@ -177,6 +185,11 @@ An example with YM (/YEAR/MONTH/) folder structure
 **Crawl parameters:**  
 &nbsp;&nbsp;--crawlON = process Source and its subfolders 3 levels deep (default)  
 &nbsp;&nbsp;--crawlOFF = process Source directory only, i.e. Source files at root with no subfolders
+
+**Date-Model Order parameters**
+&nbsp;&nbsp;--DateModel = filename is formed by placeing Date and then Model (default), example: 20100417-201226-000000-DMCFZ8.jpg
+&nbsp;&nbsp;--ModelDate = filename is formed by placeing Model and then Date, example: DMCFZ8-20100417-201226-000000.jpg
+&nbsp;&nbsp;--NoModel = filename is formed by placeing Date without Model, example: 20100417-201226-000000.jpg
 
 ## Usage and examples
 The command below will search for files at Source Media Location including subfolders (3 levels deep) and **move** files from "upload" to Destination Media Location keeping all files under "archive" with sorting by Year. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  

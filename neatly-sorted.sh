@@ -1,8 +1,8 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.7.4
-# Date: 2022-02-20
+# Version: v1.8
+# Date: 2022-02-21
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -35,6 +35,8 @@ OperationsTimer="OFF"
 OperationsTimerLog="Operations timing (ms):\n"
 # Setting crawl: <ON> depth level 3 (default), <OFF>
 CrawlDepth="3"
+# Setting Date-Model order DateModelOrder, i.e. DateModel = Date-Model, ModelDate = Model-Date, NoModel = No-Model
+DateModelOrder="DateModel"
 # Setting variables
 LogDate="$(date +%Y%m%d-%H%M%S)"
 WIPDirectoryDate="${LogDate}"
@@ -46,7 +48,7 @@ LogOutput+="${LogDate}\n"
 # Help options
 #=======================================================================
 HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help>'\n"
-UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move> <--timerON|--timerOFF> <--crawlON|--crawlOFF>\n  Mandatory parameters: source-path, destination-path\n"
+UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move> <--timerON|--timerOFF> <--crawlON|--crawlOFF> <--DateModel|--ModelDate|--NoModel>\n  Mandatory parameters: source-path, destination-path\n"
 SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n  Example: '/home/username/pictures/'\n"
 DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n  Example: '/mystorage/sorted-pictures/'\n"
 ExtensionTip="Extension case switch options: \n  --ExT = unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n  --EXT = uppercase, i.e. jpeg > JPEG \n  --ext (default) = lowercase, i.e. JPEG > jpeg\n"
@@ -55,7 +57,8 @@ YMDTip="Destination files sort-by options:\n  --YMD = YEAR/MONTH/DAY/picture.jpg
 CopyMoveTip="Source to Work-In-Progress (WIP) file transfer mode: \n  --copy = copy files,\n  --move = move files (default)\n"
 OperationsTimerTip="Operations timer (monitoring, debug): \n  --timerON = display and log operation timings,\n  --timerOFF = do not display and log operation timings (default)\n"
 CrawlTip="Crawl parameters: \n  --crawlON = process Source and its subfolders 3 levels deep (default),\n  --crawlOFF = process Source directory only, i.e. Source files at root with no subfolders\n"
-FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}${CopyMoveTip}${OperationsTimerTip}${CrawlTip}\n"
+DateModelOrderTip="Date-Model-Order parameters: \n  --DateModel = filename is formed by placeing Date and then Model (default), example: 20100417-201226-000000-DMCFZ8.jpg,\n  --ModelDate = filename is formed by placeing Model and then Date, example: DMCFZ8-20100417-201226-000000.jpg,\n  --NoModel = filename is formed by placeing Date without Model, example: 20100417-201226-000000.jpg\n"
+FullHelpTip+="${UsageTip}${SourcePathTip}${DestinationPathTip}${ExtensionTip}${FSAttributeTip}${YMDTip}${CopyMoveTip}${OperationsTimerTip}${CrawlTip}${DateModelOrderTip}\n"
 
 # End of Forming help menu options
 
@@ -177,6 +180,7 @@ EXIFModelParser() {
   EXIF_OUTPUT="${EXIF_OUTPUT//-/}"
   EXIF_OUTPUT="${EXIF_OUTPUT//,/}"
   EXIF_OUTPUT="${EXIF_OUTPUT// /}"
+  EXIF_OUTPUT="${EXIF_OUTPUT//_/}"
   EXIF_OUTPUT="${EXIF_OUTPUT//:/}"
   MODEL="${EXIF_OUTPUT}"
 }
@@ -229,8 +233,18 @@ FileNameIncrementer(){
   FileNameToIncrementBasename="$(basename "${FileNameToIncrement}")"
   # Extracting file name
   FileNameToIncrementFileName="${FileNameToIncrementBasename%.*}"
-  # Extracting the Element, i.e. SUBSECOND part
-  FileNameToIncrementElement="$(echo "${FileNameToIncrementFileName}" | awk -F "-" '{print $4}')"
+  # Extracting the SUBSECOND element depending on Model position in the filename
+  case "${DateModelOrder}" in 
+    DateModel)
+      FileNameToIncrementElement="$(echo "${FileNameToIncrementFileName}" | awk -F "-" '{print $(NF - 1)}')"
+      ;;
+    ModelDate)
+      FileNameToIncrementElement="$(echo "${FileNameToIncrementFileName}" | awk -F "-" '{print $NF}')"
+      ;;
+    NoModel)
+      FileNameToIncrementElement="$(echo "${FileNameToIncrementFileName}" | awk -F "-" '{print $NF}')"
+      ;;
+  esac
   # Incrementing the Element so that we can form a new File Name
   printf -v IncrementedElement %06d "$((10#${FileNameToIncrementElement} + 1))"
   # Passing the incremented Element to FileNameIncrementerResult
@@ -253,7 +267,7 @@ FileNameDuplicateIncrementer(){
   # Extracting file name
   FileNameDuplicateToIncrementFileName="${FileNameDuplicateToIncrementBasename%.*}"
   # Extracting the Element, i.e. DUP*** part
-  FileNameDuplicateToIncrementElement="$(echo "${FileNameDuplicateToIncrementFileName}" | awk -F "-" '{print $5}')"
+  FileNameDuplicateToIncrementElement="$(echo "${FileNameDuplicateToIncrementFileName}" | awk -F "-" '{print $NF}')"
   # Extracting the numerical part of Element, i.e. *** part
   FileNameDuplicateToIncrementElement="${FileNameDuplicateToIncrementFileName: -3}"
   # Checking if DUP*** is extracted
@@ -540,6 +554,21 @@ if [[ "${#}" -gt 2 ]] ; then
         # Setting the crawl ON, i.e. process Source directory only, i.e. Source files at root with no subfolders
         CrawlDepth="1"
         ;;
+      # Checking if the argument is date-model order switch and validating it
+      --DateModel)
+        # Forming filename by placeing Date and then Model (default)
+        DateModelOrder="DateModel"
+        ;;
+      # Checking if the argument is date-model order switch and validating it
+      --ModelDate)
+        # Forming filename by placeing Model and then Date
+        DateModelOrder="ModelDate"
+        ;;
+      # Checking if the argument is date-model order switch and validating it
+      --NoModel)
+        # Forming filename by placeing Date without Model
+        DateModelOrder="NoModel"
+        ;;
       # Skipping if no expected parameter found
       *) 
         printf "Prerequisite Critical Error! Unexpected parameter detected: ${Argument}, ignoring it\n"
@@ -616,7 +645,18 @@ case "${CrawlDepth}" in
     LogOutput+="OFF, Source root files only\n"
     ;;
 esac
-
+LogOutput+="    Date-Model order: "
+case "${DateModelOrder}" in
+  DateModel)
+    LogOutput+="Date-Model\n"
+    ;;
+  ModelDate)
+    LogOutput+="Model-Date\n"
+    ;;
+  NoModel)
+    LogOutput+="No-Model, Date only\n"
+    ;;
+esac
 # Printing the aggregate of parameters to the screen
 printf "${LogOutput}\n"
 #
@@ -1089,8 +1129,21 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
         FormatedFileName="${WIPFileName}-UVRFD000.${WIPFileExtension}"
       # Modify filename as per format if tag/attribute extraction is successful
       else
-        FormatedFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}.${NormalisedFileExtension}"
-        FormatedShortenFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-"
+        # Forming filename depending on the selected Date-Model order
+        case "${DateModelOrder}" in 
+          DateModel)
+            FormatedFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-${MODEL}.${NormalisedFileExtension}"
+            FormatedShortenFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-"
+            ;;
+          ModelDate)
+            FormatedFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}.${NormalisedFileExtension}"
+            FormatedShortenFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-"
+            ;;
+          NoModel)
+            FormatedFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}.${NormalisedFileExtension}"
+            FormatedShortenFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-"
+            ;;
+        esac
       fi
 
       # Setting Target Directory structure with TargetDirectoryStructure
@@ -1291,8 +1344,18 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
               OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Destination duplicate increment: ${OperationsTimerResult}\n"
               # Returning the incremented element from FileNameIncrementer function
               IncrementedSubsecond="${FileNameIncrementerResult}"
-              # Re-forming the File Name with the incremented SUBSECOND
-              FormatedFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${IncrementedSubsecond}.${NormalisedFileExtension}"
+              # Re-forming the File Name with the incremented SUBSECOND and depending on the selected Date-Model order
+              case "${DateModelOrder}" in 
+                DateModel)
+                  FormatedFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${IncrementedSubsecond}-${MODEL}.${NormalisedFileExtension}"
+                  ;;
+                ModelDate)
+                  FormatedFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${IncrementedSubsecond}.${NormalisedFileExtension}"
+                  ;;
+                NoModel)
+                  FormatedFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${IncrementedSubsecond}.${NormalisedFileExtension}"
+                  ;;
+              esac
               # Checking if Destination FileName exists
               # "-e file" returns true if file exists
               # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
@@ -1333,8 +1396,18 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
                 printf "Post-Prerequisite Critical Error! Could not write ${FileNameDuplicates}. Directory ${DestinationPath} does not appear to be writable.\n"
                 exit
               else
-                # Re-forming the File Name by appending DUP000
-                FormatedFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP000.${NormalisedFileExtension}"
+                # Re-forming the File Name by appending DUP000 and depending on the selected Date-Model order
+                case "${DateModelOrder}" in 
+                  DateModel)
+                    FormatedFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-${MODEL}-DUP000.${NormalisedFileExtension}"
+                    ;;
+                  ModelDate)
+                    FormatedFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP000.${NormalisedFileExtension}"
+                    ;;
+                  NoModel)
+                    FormatedFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP000.${NormalisedFileExtension}"
+                    ;;
+                esac
                 # Checking if Destination FileName exists
                 # "-e file" returns true if file exists
                 # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
@@ -1366,7 +1439,18 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
                 else
                   ## Taking operations timer snapshot
                   OperationsTimerStart=$(date +%s%3N)
-                  FormatedShortenDuplicateFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-"
+                  # Forming filename depending on the selected Date-Model order
+                  case "${DateModelOrder}" in 
+                    DateModel)
+                      FormatedShortenDuplicateFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-${MODEL}-"
+                      ;;
+                    ModelDate)
+                      FormatedShortenDuplicateFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-"
+                      ;;
+                    NoModel)
+                      FormatedShortenDuplicateFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-"
+                      ;;
+                  esac
                   # Calling DuplicateSearch when a duplicate is identified
                   DuplicateSearch "${DestinationPath}/${FileNameDuplicates}" "${FormatedShortenDuplicateFileName}" "${NormalisedFileExtension}"
                   ## Taking operations timer snapshot, counting and registering operations timing
@@ -1391,9 +1475,18 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
                   OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Duplicates duplicate increment: ${OperationsTimerResult}\n"
                   # Returning the incremented element from FileNameIncrementer function
                   FileNameIncrementedElement="${FileNameDuplicateIncrementerResult}"
-                  # Re-forming the File Name with the incremented Element
-                  #FormatedFileName=${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${RANDOM}.${NormalisedFileExtension}
-                  FormatedFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${FileNameIncrementedElement}.${NormalisedFileExtension}"
+                  # Re-forming the File Name with the incremented Element and depending on the selected Date-Model order
+                  case "${DateModelOrder}" in 
+                    DateModel)
+                      FormatedFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-${MODEL}-DUP${FileNameIncrementedElement}.${NormalisedFileExtension}"
+                      ;;
+                    ModelDate)
+                      FormatedFileName="${MODEL}-${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${FileNameIncrementedElement}.${NormalisedFileExtension}"
+                      ;;
+                    NoModel)
+                      FormatedFileName="${YEAR}${MONTH}${DAY}-${HOUR}${MINUTE}${SECOND}-${SUBSECOND}-DUP${FileNameIncrementedElement}.${NormalisedFileExtension}"
+                      ;;
+                  esac
                   # Checking if Destination FileName exists
                   # "-e file" returns true if file exists
                   # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
