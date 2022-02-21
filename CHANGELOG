@@ -1,5 +1,6 @@
 #=======================================================================
 #   Changelog :
+#   20220221 v1.8.1: Minor improvements in MODEL normalization
 #   20220221 v1.8: Model feature is added to select MODEL position in the filename
 #   20220220 v1.7.4: PNG file processing is added and MODEL character clean-up added
 #   20220103 v1.7.3: source empty subfolder clean-up added

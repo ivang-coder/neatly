@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.8
+# Version: v1.8.1
 # Date: 2022-02-21
 
 # Knowledge Base:
@@ -182,6 +182,8 @@ EXIFModelParser() {
   EXIF_OUTPUT="${EXIF_OUTPUT// /}"
   EXIF_OUTPUT="${EXIF_OUTPUT//_/}"
   EXIF_OUTPUT="${EXIF_OUTPUT//:/}"
+  EXIF_OUTPUT="${EXIF_OUTPUT//>/}"
+  EXIF_OUTPUT="${EXIF_OUTPUT//</}"
   MODEL="${EXIF_OUTPUT}"
 }
 
