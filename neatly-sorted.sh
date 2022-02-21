@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.8.1
+# Version: v1.8.2
 # Date: 2022-02-21
 
 # Knowledge Base:
@@ -111,6 +111,10 @@ EXIFSubSecCreateDateParser() {
   SECOND="${EXIF_OUTPUT_ARRAY[5]}"
   SUBSECOND="${EXIF_OUTPUT_ARRAY[6]}"
   DATE="${YEAR}:${MONTH}:${DAY}"
+  # Forming Subsecond 6-digit element to normalize the length
+  SubSecondZero="000000"
+  printf -v NormalizedElement %06d "$((10#${SubSecondZero} + 10#${SUBSECOND}))"
+  SUBSECOND="${NormalizedElement}"
 }
 
 # EXIFCreateDateParser extracts EXIF metadata: the year, month, day, hour, minute, second,
@@ -176,14 +180,8 @@ FSModifyTimeParser() {
 EXIFModelParser() {
   # Define a variable and pass the arguments
   EXIF_OUTPUT="${1}"
-  # Remove colons, hypens, commas, etc by substituting characters with nothing
-  EXIF_OUTPUT="${EXIF_OUTPUT//-/}"
-  EXIF_OUTPUT="${EXIF_OUTPUT//,/}"
-  EXIF_OUTPUT="${EXIF_OUTPUT// /}"
-  EXIF_OUTPUT="${EXIF_OUTPUT//_/}"
-  EXIF_OUTPUT="${EXIF_OUTPUT//:/}"
-  EXIF_OUTPUT="${EXIF_OUTPUT//>/}"
-  EXIF_OUTPUT="${EXIF_OUTPUT//</}"
+  # Remove colons, hypens, commas, etc by substituting non-alphanumerical characters with nothing
+  EXIF_OUTPUT="${EXIF_OUTPUT//[^[:alnum:]]/}"
   MODEL="${EXIF_OUTPUT}"
 }
 
