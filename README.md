@@ -14,3 +14,8 @@ Neatly might be a solution you're looking for. The suite is designed to be execu
 - Neatly-Sorted has been tested and used on various systems, however it is designed with "older systems" in mind, i.e. ARM-based QNAP NAS TS-210.
 - Neatly-Compressed being a CPU-intensive module (due to the nature of FF) is designed to be executed primarily on systems with high-performance CPUs, i.e. Intel Core i3/i5/i7/i9, AMD Athlon/Opteron, etc. The project can also run on devices with low-performance CPUs, i.e. Intel Pentium/Celeron-based NAS systems and old PCs. Expect a lot longer encoding time on systems with low-performance CPUs, especially when x265 mode is selected.
 
+## More details
+For more info, see below
+- Neatly-Sorted Readme: neatly-sorted/README.md or https://github.com/ivang-coder/neatly/blob/main/neatly-sorted/README.md  
+- Neatly-Compressed Readme: neatly-compressed/README.md or https://github.com/ivang-coder/neatly/blob/main/neatly-compressed/README.md  
+
