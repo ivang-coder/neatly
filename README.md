@@ -16,6 +16,6 @@ Neatly might be a solution you're looking for. The suite is designed to be execu
 
 ## More details
 For more info, see below
-- Neatly-Sorted Readme: neatly-sorted/README.md or https://github.com/ivang-coder/neatly/blob/main/neatly-sorted/README.md  
-- Neatly-Compressed Readme: neatly-compressed/README.md or https://github.com/ivang-coder/neatly/blob/main/neatly-compressed/README.md  
+- Neatly-Sorted Readme: ```neatly-sorted/README.md``` or https://github.com/ivang-coder/neatly/blob/main/neatly-sorted/README.md  
+- Neatly-Compressed Readme: ```neatly-compressed/README.md``` or https://github.com/ivang-coder/neatly/blob/main/neatly-compressed/README.md  
 
