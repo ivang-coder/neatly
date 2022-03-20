@@ -1,8 +1,8 @@
 #! /bin/bash
 
 # Author: Ivan Gladushko
-# Version: v1.8.2
-# Date: 2022-02-21
+# Version: v1.8.3
+# Date: 2022-03-20
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -49,7 +49,7 @@ LogOutput+="${LogDate}\n"
 #=======================================================================
 HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help>'\n"
 UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move> <--timerON|--timerOFF> <--crawlON|--crawlOFF> <--DateModel|--ModelDate|--NoModel>\n  Mandatory parameters: source-path, destination-path\n"
-SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n  Example: '/home/username/pictures/'\n"
+SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n  Example: '/home/username/pictures/'; '/home/username/pictures/DSC_000035.JPG'\n"
 DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n  Example: '/mystorage/sorted-pictures/'\n"
 ExtensionTip="Extension case switch options: \n  --ExT = unchanged, i.e. JPEG > JPEG, jpeg > jpeg\n  --EXT = uppercase, i.e. jpeg > JPEG \n  --ext (default) = lowercase, i.e. JPEG > jpeg\n"
 FSAttributeTip="File system attribute extraction is quite unreliable and can be used as the last resort.\n  If enabled with --FSAttribute, it can cause conflicts and affect file sorting.\n  --NoFSAttribute (default) is the recommended option.\n"
@@ -431,13 +431,29 @@ case "${1}" in
     # Exiting if there are issues with the source path
     # "-e file" returns true if file exists
     # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
-    if [[ ! -e "${1}" ]] ; then
+    if [[ -f "${1}" ]] ; then
+      # Setting flag
+      SourceType="file"
+      # Extracting path from source absolute path
+      SourcePath="$(dirname "${1}")"
+      # Extracting file basename from source absolute path
+      SourceFileBasename="$(basename "${1}")"
+      # Substituting characters in file basename, the script chokes on "[" and "]" characters
+      SourceFileBasename="${SourceFileBasename//[/(}"
+      SourceFileBasename="${SourceFileBasename//]/)}"
+      # Extracting file name
+      SourceFileName="${SourceFileBasename%.*}"
+      # Extracting file extension
+      SourceFileExtension="${SourceFileBasename##*.}"
+    elif [[ -e "${1}" ]] ; then
+      # Setting flag
+      SourceType="directory"
+      # Passing the source path to a variable and continue
+      SourcePath="${1}"
+    else
       printf "Prerequisite Critical Error! Source path ${1} could not be found or does not exist. Exiting now.\n"
       printf "${SourcePathTip}\n"
       exit
-    else
-      # Passing the source path to a variable and continue
-      SourcePath="${1}"
     fi
     ;;
   # Exiting if no expected parameter found
@@ -581,6 +597,7 @@ else
 fi
 # Writing the aggregate of parameters to the log file
 LogOutput+="Proceeding with parameters below.\n" 
+LogOutput+="  Source type: ${SourceType}\n"
 LogOutput+="  Mandatory parameters:\n"
 LogOutput+="    Source path: ${SourcePath}\n"
 LogOutput+="    Destination path: ${DestinationPath}\n"
@@ -639,7 +656,7 @@ esac
 LogOutput+="    Crawl mode: "
 case "${CrawlDepth}" in 
   3)
-    LogOutput+="ON, Source and ${CrawlDepth} level deep\n"
+    LogOutput+="ON, Source and ${CrawlDepth} levels deep\n"
     ;;
   1)
     LogOutput+="OFF, Source root files only\n"
@@ -734,16 +751,27 @@ OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerSt
 # Checking files in source directory
 # Taking operations timer snapshot
 OperationsTimerStart=$(date +%s%3N)
-### Confirming files with specific video and image extensions in source directory and its subfolders, ingoring hidden folders and files with leading "."
-SourceFileCheck="$(find "${SourcePath}" -maxdepth "${CrawlDepth}" -not -path '*/\.*' -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
--iname "*.[Jj][Pp][Ee][Gg]" -or \
--iname "*.[Pp][Nn][Gg]" -or \
--iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
-### Checking the number of fetched files before proceeding further
-if [[ "${SourceFileCheck[@]: -1}" == "" ]] ; then 
-  FilesFetched=0
-else
-  FilesFetched=1
+### Single file mode. Confirming the file's media extension
+if [[ "${SourceType}" == "file" ]] ; then
+  NormalisedFileExtension="$(echo "${SourceFileExtension}" | awk '{print tolower($0)}')"
+  if ! [[ "$NormalisedFileExtension" =~ ^(jpeg|jpg|gif|png|mov|mpg|mp4|mpv|)$ ]]; then
+    FilesFetched=0
+  else
+    FilesFetched=1
+  fi
+fi
+### Directory mode. Confirming files with specific video and image extensions in source directory and its subfolders, ingoring hidden folders and files with leading "."
+if [[ "${SourceType}" == "directory" ]] ; then
+  SourceFileCheck="$(find "${SourcePath}" -maxdepth "${CrawlDepth}" -not -path '*/\.*' -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
+  -iname "*.[Jj][Pp][Ee][Gg]" -or \
+  -iname "*.[Pp][Nn][Gg]" -or \
+  -iname "*.[Mm][PpOo][Gg4Vv]" | sort -n)"
+  ### Checking the number of fetched files before proceeding further
+  if [[ "${SourceFileCheck[@]: -1}" == "" ]] ; then 
+    FilesFetched=0
+  else
+    FilesFetched=1
+  fi
 fi
 ## Taking operations timer snapshot, counting and registering operations timing
 OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source file check search: ${OperationsTimerResult}\n"
@@ -755,7 +783,48 @@ if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" 
 OperationsTimerLog="Operations timing (ms):\n"
 
 # Seaching and moving files from Source to Work-In-Progress directory
-if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
+if [[ "${SourceType}" == "file" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
+  ## Taking operations timer snapshot
+  OperationsTimerStart=$(date +%s%3N)
+  # Passing Source folder name, i.e. no path
+  SourcePathBasename="$(basename "${SourcePath}")"
+  # Resetting variables
+  SourceFileMoveSuccessCount=0
+  SourceFileMoveFailureCount=0
+  SourceFileNotFoundCount=0
+  printf "Transferring files from ${SourceSubFolder} in Source to Work-In-Progress ${WIPDirectoryPath}/${SourcePathBasename} directory for processing\n"
+  LogOutput+="Transferring files from ${SourceSubFolder} in Source to Work-In-Progress ${WIPDirectoryPath}/${SourcePathBasename} directory for processing\n"
+  if ( ! mkdir -p "${WIPDirectoryPath}/${SourcePathBasename}" >/dev/null 2>&1 ) ; then
+    printf "Critical Error! Could not write ${WIPDirectoryPath}/${SourcePathBasename}. Directory ${SourcePath} does not appear to be writable.\n"
+    LogOutput+="Critical Error! Could not write ${WIPDirectoryPath}/${SourcePathBasename}. Directory ${SourcePath} does not appear to be writable.\n"
+    LogDumper "${LogOutput}"
+  fi
+  # Transferring file from source to Work-In-Progress directory, piping errors to NULL
+  if ( ! "${CopyMove}" "${SourcePath}/${SourceFileBasename}" "${WIPDirectoryPath}/${SourcePathBasename}" >/dev/null 2>&1 ) ; then
+    printf "Something went wrong! ${SourcePath}/${SourceFileBasename} could not be transferred\n"
+    LogOutput+="Something went wrong! ${SourcePath}/${SourceFileBasename} could not be transferred\n"
+    # Counting failed operations with files
+    ((SourceFileMoveFailureCount+=1))
+  else
+    # Counting successful operations with files
+    ((SourceFileMoveSuccessCount+=1))
+  fi
+  printf "${SourceFileMoveSuccessCount} files have been transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
+  printf "${SourceFileMoveFailureCount} files could not be transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
+  printf "${SourceFileNotFoundCount} files could not be found in Source ${SourcePath} folder\n"
+  LogOutput+="${SourceFileMoveSuccessCount} files have been transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
+  LogOutput+="${SourceFileMoveFailureCount} files could not be transferred from Source ${SourcePath} to Work-In-Progress $WIPDirectoryPath\n"
+  LogOutput+="${SourceFileNotFoundCount} files could not be found in Source ${SourcePath} folder\n"
+  ## Taking operations timer snapshot, counting and registering operations timing
+  OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Source-to-WIP transfer: ${OperationsTimerResult}\n"
+  # Display operation timings
+  if [[ "${OperationsTimer}" == "ON" ]] ; then printf "${OperationsTimerLog}" ; fi
+  # Log operation timings
+  if [[ "${OperationsTimer}" == "ON" ]] ; then LogOutput+="${OperationsTimerLog}" ; fi
+  LogOutput+="#############################\n"
+  # Reset operations timing variable
+  OperationsTimerLog="Operations timing (ms):\n"
+elif [[ "${SourceType}" == "directory" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   ## Taking operations timer snapshot
   OperationsTimerStart=$(date +%s%3N)
   # Passing Source folder name, i.e. no path

@@ -1,5 +1,6 @@
 #=======================================================================
 #   Changelog :
+#   20220320 v1.8.3: Neatly-Sorted. Single source file mode added
 #   20220221 v1.8.2: Subsecond string length and MODEL normalization
 #   20220221 v1.8.1: Minor improvements in MODEL normalization
 #   20220221 v1.8: Model feature is added to select MODEL position in the filename

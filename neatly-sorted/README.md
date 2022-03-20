@@ -76,7 +76,7 @@ Use the commands below to install exiftool
 **Unverified folder at Destination:** ```/DestinationDirectory/Unverified```  
 **Log file at Destination:** ```/DestinationDirectory/neatly-sorted-YYYYMMDD.log```  
 
-### Step 2. Search media files (i.e. jpg, jpeg, mp4, mpg and mov) in Source Directory, include subfolders (3 levels deep) if Crawl is enabled.  
+### Step 2. Single file mode: locate the selected media file. Directory mode: search media files (i.e. jpg, jpeg, mp4, mpg and mov) in Source Directory, including subfolders (3 levels deep) if Crawl is enabled.  
 ```Note! Hidden files and folders (prefixed with '.') are excluded from the search scope. Example: /my-location/.my-hidden-image.jpg```  
 **/SourceDirectory/**  
 ├── subfolder01/  
@@ -155,7 +155,7 @@ An example with YM (/YEAR/MONTH/) folder structure
 &nbsp;&nbsp;Mandatory parameters: **source-path**, **destination-path**
 
 **Source** absolute path is required with leading '/'. Alternatively use '.' for current directory.  
-```Example: '/home/username/pictures/'```
+```Example: '/home/username/pictures/'; '/home/username/pictures/DSC_000035.JPG'```
 
 **Destination** absolute path is required with leading '/'. Alternatively, use '.' for current directory.  
 ```Example: '/mystorage/sorted-pictures/'```
