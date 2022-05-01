@@ -1,8 +1,8 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 # Author: Ivan Gladushko
-# Version: v1.8.3
-# Date: 2022-03-20
+Version="v1.9.1"
+# Date: 2022-05-01
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -47,7 +47,8 @@ LogOutput+="${LogDate}\n"
 #=======================================================================
 # Help options
 #=======================================================================
-HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help>'\n"
+HelpTip="Help: for more parameters use '/bin/bash ${InstanceName} <-h|--help> <-v|--version>'\n"
+VersionTip="Use '/bin/bash ${InstanceName} <-v|--version>' to display version\n"
 UsageTip="Usage: '/bin/bash ${InstanceName} <source-path|.> <destination-path|.> <--Ext|--EXT|--ext> <--FSAttribute|--NoFSAttribute> <--YMD|--YM|--Y|--NOSORT> <--copy|--move> <--timerON|--timerOFF> <--crawlON|--crawlOFF> <--DateModel|--ModelDate|--NoModel>\n  Mandatory parameters: source-path, destination-path\n"
 SourcePathTip="Source absolute path is required with leading '/'. Alternatively use '.' for current directory.\n  Example: '/home/username/pictures/'; '/home/username/pictures/DSC_000035.JPG'\n"
 DestinationPathTip="Destination absolute path is required with leading '/'. Alternatively, use '.' for current directory.\n  Example: '/mystorage/sorted-pictures/'\n"
@@ -85,8 +86,8 @@ IsValidDate() {
   fi
 }
 
-# EXIFSubSecCreateDateParser extracts EXIF metadata: the year, month, day, hour, minute, second, subsecond,
-# and generates date and note
+# EXIFSubSecCreateDateParser extracts EXIF metadata: the year, month, day, hour, minute, second, subsecond, and generates date and note
+# 2022:04:30:09:58:00.511586
 EXIFSubSecCreateDateParser() {
   # Define a variable and pass the arguments
   EXIF_OUTPUT="${1}"
@@ -110,15 +111,14 @@ EXIFSubSecCreateDateParser() {
   MINUTE="${EXIF_OUTPUT_ARRAY[4]}"
   SECOND="${EXIF_OUTPUT_ARRAY[5]}"
   SUBSECOND="${EXIF_OUTPUT_ARRAY[6]}"
-  DATE="${YEAR}:${MONTH}:${DAY}"
   # Forming Subsecond 6-digit element to normalize the length
   SubSecondZero="000000"
   printf -v NormalizedElement %06d "$((10#${SubSecondZero} + 10#${SUBSECOND}))"
   SUBSECOND="${NormalizedElement}"
 }
 
-# EXIFCreateDateParser extracts EXIF metadata: the year, month, day, hour, minute, second,
-# and generates subsecond, date and note
+# EXIFCreateDateParser extracts EXIF metadata: the year, month, day, hour, minute, second, and generates subsecond, date and note
+# 2022:04:30:09:58:00
 EXIFCreateDateParser() {
   # Define a variable and pass the arguments
   EXIF_OUTPUT="${1}"
@@ -142,7 +142,35 @@ EXIFCreateDateParser() {
   MINUTE="${EXIF_OUTPUT_ARRAY[4]}"
   SECOND="${EXIF_OUTPUT_ARRAY[5]}"
   SUBSECOND="000000"
-  DATE="${YEAR}:${MONTH}:${DAY}"
+}
+
+# EXIFFileModifyDateParser extracts EXIF metadata: the year, month, day, hour, minute, second, and generates subsecond, date and note
+# 2022:04:30:09:58:00-04:00
+EXIFFileModifyDateParser() {
+  # Define a variable and pass the arguments
+  EXIF_OUTPUT="${1}"
+  # Substitute dots with a common colon delimiter
+  EXIF_OUTPUT_SUBSTITUTE="${EXIF_OUTPUT//./:}"
+  EXIF_OUTPUT_SUBSTITUTE="${EXIF_OUTPUT//-/:}"
+  # Define delimiter
+  DELIMITER=":"
+  # Concatenate the delimiter with the main string
+  DELIMITED_EXIF_OUTPUT="${EXIF_OUTPUT_SUBSTITUTE}${DELIMITER}"
+  # Split the text based on the delimiter
+  EXIF_OUTPUT_ARRAY=()
+  while [[ "${DELIMITED_EXIF_OUTPUT}" ]]; do
+    EXIF_OUTPUT_ARRAY+=( "${DELIMITED_EXIF_OUTPUT%%${DELIMITER}*}" )
+    DELIMITED_EXIF_OUTPUT="${DELIMITED_EXIF_OUTPUT#*${DELIMITER}}"
+  done
+  # Assign the array values to the corresponding variables
+  YEAR="${EXIF_OUTPUT_ARRAY[0]}"
+  MONTH="${EXIF_OUTPUT_ARRAY[1]}"
+  DAY="${EXIF_OUTPUT_ARRAY[2]}"
+  HOUR="${EXIF_OUTPUT_ARRAY[3]}"
+  MINUTE="${EXIF_OUTPUT_ARRAY[4]}"
+  SECOND="${EXIF_OUTPUT_ARRAY[5]}"
+  OffsetHour="${EXIF_OUTPUT_ARRAY[6]}"
+  OffsetMinute="${EXIF_OUTPUT_ARRAY[7]}"
 }
 
 # FSModifyTimeParser extracts File System attributes: the year, month, day, hour, minute, second, subsecond
@@ -172,7 +200,6 @@ FSModifyTimeParser() {
   SECOND="${MTIME_OUTPUT_ARRAY[5]}"
   LONGSUBSECOND="${MTIME_OUTPUT_ARRAY[6]}"
   SUBSECOND="${LONGSUBSECOND:0:6}"
-  DATE="${YEAR}:${MONTH}:${DAY}"
 }
 
 # EXIFModelParser extracts EXIF metadata: the model 
@@ -350,13 +377,13 @@ DuplicateSearch(){
   LogOutput+="Search for duplicate file basename match ${FileNameToSearch}*.${FileExtensionToSearch} reveals: \n${DuplicateSearchResult}\n"
 }
 
-# LogDumper makes an output to log file, and exists the programme
-LogDumper(){
+# ExitWithDumping makes an output to log file, and exists the programme
+ExitWithDumping(){
   # Passing parameters to variables
-  LogDumperLogOuput="${1}"
+  AggregatedLogOuput="${1}"
   # Writing to log file
   printf "Writing to log file ${DestinationPath}/${LogFileName}\n"
-  printf "${LogDumperLogOuput}" >> "${DestinationPath}/${LogFileName}"
+  printf "${AggregatedLogOuput}" >> "${DestinationPath}/${LogFileName}"
   printf "Exiting now.\n"
   exit
 }
@@ -426,9 +453,15 @@ case "${1}" in
     printf "${FullHelpTip}\n"
     exit
     ;;
+  # Checking if the first argument is a call for version
+  -v|--version)
+    printf "${Version}\n"
+    exit
+    ;;
   # Checking if the first argument is a file source path and validating it
   /*|.) 
     # Exiting if there are issues with the source path
+    # "-d directory" returns true if directory exists
     # "-e file" returns true if file exists
     # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
     if [[ -f "${1}" ]] ; then
@@ -445,7 +478,7 @@ case "${1}" in
       SourceFileName="${SourceFileBasename%.*}"
       # Extracting file extension
       SourceFileExtension="${SourceFileBasename##*.}"
-    elif [[ -e "${1}" ]] ; then
+    elif [[ -d "${1}" ]] ; then
       # Setting flag
       SourceType="directory"
       # Passing the source path to a variable and continue
@@ -469,9 +502,10 @@ case "${2}" in
   # Checking if the second argument is a file destination path and validating it
   /*|.) 
     # Exiting if there are issues with the destination path
+    # "-d directory" returns true if directory exists
     # "-e file" returns true if file exists
     # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
-    if [[ ! -e "${2}" ]] ; then
+    if [[ ! -d "${2}" ]] ; then
       printf "Prerequisite Critical Error! Destination path ${2} could not be found or does not exist. Exiting now.\n"
       printf "${DestinationPathTip}\n"
       exit
@@ -723,21 +757,21 @@ if ( ! mkdir -p "${WIPDirectoryPath}" >/dev/null 2>&1 ) ; then
 else
   PrerequisitesOK=1
 fi
-## Cheking if the destination directory is writable by creating Duplicates folder, piping errors to NULL
+## Checking if the destination directory is writable by creating Duplicates folder, piping errors to NULL
 if ( ! mkdir -p "${DestinationPath}/${FileNameDuplicates}" >/dev/null 2>&1 ) ; then
   printf "Prerequisite Critical Error! Could not write ${FileNameDuplicates}. Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
   exit
 else
   PrerequisitesOK=1
 fi
-## Cheking if the destination directory is writable by creating UnverifiedFiles folder, piping errors to NULL
+## Checking if the destination directory is writable by creating UnverifiedFiles folder, piping errors to NULL
 if ( ! mkdir -p "${DestinationPath}/${UnverifiedFiles}" >/dev/null 2>&1 ) ; then
   printf "Prerequisite Critical Error! Could not write ${UnverifiedFiles}. Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
   exit
 else
   PrerequisitesOK=1
 fi
-## Cheking if the destination directory is writable by creating Log file, piping errors to NULL
+## Checking if the destination directory is writable by creating Log file, piping errors to NULL
 if ( ! touch "${DestinationPath}/${LogFileName}" >/dev/null 2>&1 ) ; then
   printf "Prerequisite Critical Error! Could not write ${LogFileName}. Directory ${DestinationPath} does not appear to be writable. Exiting now.\n"
   exit
@@ -797,7 +831,7 @@ if [[ "${SourceType}" == "file" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${Fil
   if ( ! mkdir -p "${WIPDirectoryPath}/${SourcePathBasename}" >/dev/null 2>&1 ) ; then
     printf "Critical Error! Could not write ${WIPDirectoryPath}/${SourcePathBasename}. Directory ${SourcePath} does not appear to be writable.\n"
     LogOutput+="Critical Error! Could not write ${WIPDirectoryPath}/${SourcePathBasename}. Directory ${SourcePath} does not appear to be writable.\n"
-    LogDumper "${LogOutput}"
+    ExitWithDumping "${LogOutput}"
   fi
   # Transferring file from source to Work-In-Progress directory, piping errors to NULL
   if ( ! "${CopyMove}" "${SourcePath}/${SourceFileBasename}" "${WIPDirectoryPath}/${SourcePathBasename}" >/dev/null 2>&1 ) ; then
@@ -843,10 +877,11 @@ elif [[ "${SourceType}" == "directory" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [
   if [ "${#SourceFolderList}" != 0 ] ; then
     for SourceSubFolder in ${SourceFolderList[@]} ; do
       # Ensure the file exists, then proceed with processing
+      # "-d directory" returns true if directory exists
       # "-e file" returns true if file exists
       # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
       # ${#VAR} calculates the number of characters in a variable
-      if [ -e "${SourceSubFolder}" ] && [ "${#SourceSubFolder}" != 0 ] ; then
+      if [ -d "${SourceSubFolder}" ] && [ "${#SourceSubFolder}" != 0 ] ; then
         ### Searching for files with specific video and image extensions in source directory
         SourceSubfolderFileList="$(find "${SourceSubFolder}" -maxdepth 1 -not -path '*/\.*' -type f -iname "*.[JjGg][PpIi][GgFf]" -or \
         -iname "*.[Jj][Pp][Ee][Gg]" -or \
@@ -870,13 +905,13 @@ elif [[ "${SourceType}" == "directory" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [
             if ( ! mkdir -p "${WIPDirectoryPath}/${SourcePathBasename}" >/dev/null 2>&1 ) ; then
               printf "Critical Error! Could not write ${SourceSubFolder}. Directory ${WIPDirectoryPath}/${SourcePathBasename} does not appear to be writable.\n"
               LogOutput+="Critical Error! Could not write ${SourceSubFolder}. Directory ${WIPDirectoryPath}/${SourcePathBasename} does not appear to be writable.\n"
-              LogDumper "${LogOutput}"
+              ExitWithDumping "${LogOutput}"
             fi
           else
             if ( ! mkdir -p "${WIPDirectoryPath}/${SourceSubFolder}" >/dev/null 2>&1 ) ; then
               printf "Critical Error! Could not write ${SourceSubFolder}. Directory ${WIPDirectoryPath}/${SourceSubFolder} does not appear to be writable.\n"
               LogOutput+="Critical Error! Could not write ${SourceSubFolder}. Directory ${WIPDirectoryPath}/${SourceSubFolder} does not appear to be writable.\n"
-              LogDumper "${LogOutput}"
+              ExitWithDumping "${LogOutput}"
             fi
           fi
           # Taking one file at a time and processing it
@@ -895,6 +930,7 @@ elif [[ "${SourceType}" == "directory" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [
 
             SourceFileAbsolutePath="${SourcePath}/${SourceSubFolder}/${SourceSubfolderFile}"
             # Ensure the file exists, then proceed with processing
+            # "-d directory" returns true if directory exists
             # "-e file" returns true if file exists
             # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
             # ${#VAR} calculates the number of characters in a variable
@@ -973,10 +1009,11 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${CopyMove} == "mv" ]] ; then
       ### Excluding Source and WIP directories from futher processing
       if [[ "${SourceSubFolder}" != "${SourcePath}" ]] && [[ "${SourceSubFolder}" != *"${WIPDirectoryPath}"* ]]; then 
         # Ensure the file exists, then proceed with processing
+        # "-d directory" returns true if directory exists
         # "-e file" returns true if file exists
         # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
         # ${#VAR} calculates the number of characters in a variable
-        if [ -e "${SourceSubFolder}" ] && [ "${#SourceSubFolder}" != 0 ] ; then
+        if [ -d "${SourceSubFolder}" ] && [ "${#SourceSubFolder}" != 0 ] ; then
           ### Searching for files including the hidden one, i.e. with leading '.'
           SourceSubfolderFileList="$(find "${SourceSubFolder}" -type f )"
           ### Proceeding if zero files fetched
@@ -1059,6 +1096,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
   #
   for WIPSortedFileAbsolutePath in ${WIPSortedFileAbsolutePaths[@]}; do
     # Ensure the file exists, then proceed with processing
+    # "-d directory" returns true if directory exists
     # "-e file" returns true if file exists
     # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
     # ${#VAR} calculates the number of characters in a variable
@@ -1066,7 +1104,6 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
       # Resetting variables
       SubSecCreateDateExtraction=0
       CreateDateExtraction=0
-      FileSystemAttributeExtraction=0
       # Extracting file basename from Work-In-Progress absolute path
       WIPFileBasename="$(basename "${WIPSortedFileAbsolutePath}")"
       # Extracting file name base
@@ -1085,11 +1122,12 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
       ## Taking operations timer snapshot
       OperationsTimerStart=$(date +%s%3N)
       # Attempting to extract EXIF metadata from the file to an array.
-      EXIF_EXTRACT=( $(exiftool -s -f -SubSecCreateDate -CreateDate -Model "${WIPSortedFileAbsolutePath}" | awk '{print $3":"$4}') )
+      EXIF_EXTRACT=( $(exiftool -s -f -SubSecCreateDate -CreateDate -Model -FileModifyDate "${WIPSortedFileAbsolutePath}" | awk '{print $3":"$4}') )
       # Assigning the array values to variables
       EXIF_SubSecCreateDate_OUTPUT="${EXIF_EXTRACT[0]}"
       EXIF_CreateDate_OUTPUT="${EXIF_EXTRACT[1]}"
       EXIF_Model_OUTPUT="${EXIF_EXTRACT[2]}"
+      EXIF_FileModifyDate_OUTPUT="${EXIF_EXTRACT[3]}"
       ## Taking operations timer snapshot, counting and registering operations timing
       OperationsTimerStop=$(date +%s%3N)
       OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart ))
@@ -1141,6 +1179,47 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
           else
             DATE="InvalidDate"
             LogOutput+="No valid date was found, using ${DATE}.\n"
+          fi
+          EXIFCreateDateParserOutput=("${EXIF_OUTPUT_ARRAY[@]}")
+          # Perform sanity check on correctly extracted EXIF CreateDate
+          if [[ "${EXIF_FileModifyDate_OUTPUT}" != -* ]] && [[ "${EXIF_FileModifyDate_OUTPUT}" != 0* ]] ; then
+            # Good data extracted, pass it to EXIFFileModifyDateParser to extract fields
+            # from the EXIF info
+            EXIFFileModifyDateParser "${EXIF_FileModifyDate_OUTPUT}"
+            # Check the extracted date for validity
+            if [ "$(IsValidDate "${YEAR}" "${MONTH}" "${DAY}")" == 1 ]  ; then
+              LogOutput+="A valid date without subseconds was found, using it.\n"
+            else
+              DATE="InvalidDate"
+              LogOutput+="No valid date was found, using ${DATE}.\n"
+            fi
+            EXIFFileModifyDateParserOutput=("${EXIF_OUTPUT_ARRAY[@]}")
+            if [[ "${EXIFFileModifyDateParserOutput[4]}" == "${EXIFCreateDateParserOutput[4]}" ]] && [[ "${EXIFFileModifyDateParserOutput[5]}" == "${EXIFCreateDateParserOutput[5]}" ]] ; then
+              YEAR="${EXIFFileModifyDateParserOutput[0]}"
+              MONTH="${EXIFFileModifyDateParserOutput[1]}"
+              DAY="${EXIFFileModifyDateParserOutput[2]}"
+              HOUR="${EXIFFileModifyDateParserOutput[3]}"
+              MINUTE="${EXIFFileModifyDateParserOutput[4]}"
+              SECOND="${EXIFFileModifyDateParserOutput[5]}"
+              SUBSECOND="000000"
+            else
+              YEAR="${EXIFCreateDateParserOutput[0]}"
+              MONTH="${EXIFCreateDateParserOutput[1]}"
+              DAY="${EXIFCreateDateParserOutput[2]}"
+              HOUR="${EXIFCreateDateParserOutput[3]}"
+              MINUTE="${EXIFCreateDateParserOutput[4]}"
+              SECOND="${EXIFCreateDateParserOutput[5]}"
+              SUBSECOND="000000"
+            fi
+          else
+            # Assign the array values to the corresponding variables
+            YEAR="${EXIFCreateDateParserOutput[0]}"
+            MONTH="${EXIFCreateDateParserOutput[1]}"
+            DAY="${EXIFCreateDateParserOutput[2]}"
+            HOUR="${EXIFCreateDateParserOutput[3]}"
+            MINUTE="${EXIFCreateDateParserOutput[4]}"
+            SECOND="${EXIFCreateDateParserOutput[5]}"
+            SUBSECOND="000000"
           fi
           # Perform sanity check on correctly extracted EXIF Model
           if [[ "${EXIF_Model_OUTPUT}" != -* ]] ; then
@@ -1240,6 +1319,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
         # Just a reminder that Formated File Name is FormatedFileName=${WIPFileName}-UVRFD000.${WIPFileExtension}
         #
         # Checking if Destination FileName exists
+        # "-d directory" returns true if directory exists
         # "-e file" returns true if file exists
         # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
         if [[ ! -f "${DestinationPath}/${UnverifiedFiles}/${FormatedFileName}" ]] ; then
@@ -1297,6 +1377,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
           ## Taking operations timer snapshot, counting and registering operations timing
           OperationsTimerStop=$(date +%s%3N) ; OperationsTimerResult=$(( OperationsTimerStop - OperationsTimerStart )) ; OperationsTimerLog+="  Unverified duplicate increment: ${OperationsTimerResult}\n"
           # Checking if Destination FileName exists
+          # "-d directory" returns true if directory exists
           # "-e file" returns true if file exists
           # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
           if [[ ! -f "${DestinationPath}/${UnverifiedFiles}/${FormatedFileName}" ]] ; then
@@ -1336,6 +1417,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
           exit
         else
           # Checking if Destination FileName exists
+          # "-d directory" returns true if directory exists
           # "-e file" returns true if file exists
           # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
           if [[ ! -f "${DestinationPath}/${DestinationStructure}/${FormatedFileName}" ]] ; then        
@@ -1426,6 +1508,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
                   ;;
               esac
               # Checking if Destination FileName exists
+              # "-d directory" returns true if directory exists
               # "-e file" returns true if file exists
               # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
               if [[ ! -f "${DestinationPath}/${DestinationStructure}/${FormatedFileName}" ]] ; then
@@ -1459,7 +1542,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
               fi
             fi
             # Processing the WIP file if message digest match was found
-            # Cheking if the destination directory is writable by creating Duplicates folder, piping errors to NULL
+            # Checking if the destination directory is writable by creating Duplicates folder, piping errors to NULL
             if [[ "CheckSumMatchCount" -ge 1 ]] ; then
               if ( ! mkdir -p "${DestinationPath}/${FileNameDuplicates}" >/dev/null 2>&1 ) ; then
                 printf "Post-Prerequisite Critical Error! Could not write ${FileNameDuplicates}. Directory ${DestinationPath} does not appear to be writable.\n"
@@ -1478,6 +1561,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
                     ;;
                 esac
                 # Checking if Destination FileName exists
+                # "-d directory" returns true if directory exists
                 # "-e file" returns true if file exists
                 # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
                 if [[ ! -f "${DestinationPath}/${FileNameDuplicates}/${FormatedFileName}" ]] ; then
@@ -1557,6 +1641,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
                       ;;
                   esac
                   # Checking if Destination FileName exists
+                  # "-d directory" returns true if directory exists
                   # "-e file" returns true if file exists
                   # "-f file" returns true if file exists and is a regular file, i.e. something that is not a directory, symlink, socket, device, etc.
                   if [[ ! -f "${DestinationPath}/${FileNameDuplicates}/${FormatedFileName}" ]] ; then
@@ -1640,4 +1725,4 @@ fi
 # Unsetting Internal Field Separator (IFS)
 unset IFS
 # Exiting now
-LogDumper "${LogOutput}"
+ExitWithDumping "${LogOutput}"
