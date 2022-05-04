@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
 # Author: Ivan Gladushko
-Version="v1.9.1"
-# Date: 2022-05-01
+Version="v1.9.2"
+# Date: 2022-05-03
 
 # TODO
-# Change threshold to 10 Mbps
-#
-# date-time with milliseconds using env variable, BASH 5.0+ is required, https://stackoverflow.com/questions/16548528/command-to-get-time-in-milliseconds
+# 1. Implement different thresholds for 1080p (30 fps + 60 fps), 720p, and lower resolutions
+# 2. date-time with milliseconds using env variable, BASH 5.0+ is required, https://stackoverflow.com/questions/16548528/command-to-get-time-in-milliseconds
 #   (echo $EPOCHREALTIME prints something like 1547624774.371215)
 #   (( t = ${EPOCHREALTIME/./} / 1000 ))
 
@@ -62,7 +61,7 @@ CrawlDepth="3"
 # Setting variables
 LogDate="$(date +%Y%m%d-%H%M%S)"
 WIPDirectoryDate="${LogDate}"
-LogFileDate="$(date +%Y%m%d)"
+LogFileDate="$(date +%Y%m%d%H%M)"
 # Appending log variable
 LogOutput+="${LogDate}\n"
 
@@ -668,7 +667,7 @@ fi
 HostName=$(hostname)
 HostName="${HostName//-/}"; HostName="${HostName//_/}"; HostName="${HostName//./}"
 # Forming log filename name in <instance>-<hostname>-YYYYMMDD.log format
-LogFileName="${InstanceNameBase}-${HostName}-${LogFileDate}.log"
+LogFileName="${InstanceNameBase}-${LogFileDate}.log"
 # Forming Work-In-Progress directory name in WIP-YYYYMMDD-HHmmss format
 WIPDirectoryName="WIP-${WIPDirectoryDate}"
 # Defining temp folder and Forming WIP directory

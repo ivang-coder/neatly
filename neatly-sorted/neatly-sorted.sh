@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Author: Ivan Gladushko
-Version="v1.9.1"
-# Date: 2022-05-01
+Version="v1.9.2"
+# Date: 2022-05-03
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -144,6 +144,7 @@ EXIFCreateDateParser() {
   SUBSECOND="000000"
 }
 
+# EXIFFileModifyDateParser is designed primarily for video files, however EXIF FileModifyDate proved to be unreliable due to Google Photos App changes FileModifyDate and affects CreateDate by setting it to GMT if Location/GPS is disabled.
 # EXIFFileModifyDateParser extracts EXIF metadata: the year, month, day, hour, minute, second, and generates subsecond, date and note
 # 2022:04:30:09:58:00-04:00
 EXIFFileModifyDateParser() {
@@ -1181,37 +1182,39 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
             LogOutput+="No valid date was found, using ${DATE}.\n"
           fi
           EXIFCreateDateParserOutput=("${EXIF_OUTPUT_ARRAY[@]}")
-          # Perform sanity check on correctly extracted EXIF CreateDate
-          if [[ "${EXIF_FileModifyDate_OUTPUT}" != -* ]] && [[ "${EXIF_FileModifyDate_OUTPUT}" != 0* ]] ; then
-            # Good data extracted, pass it to EXIFFileModifyDateParser to extract fields
-            # from the EXIF info
-            EXIFFileModifyDateParser "${EXIF_FileModifyDate_OUTPUT}"
-            # Check the extracted date for validity
-            if [ "$(IsValidDate "${YEAR}" "${MONTH}" "${DAY}")" == 1 ]  ; then
-              LogOutput+="A valid date without subseconds was found, using it.\n"
-            else
-              DATE="InvalidDate"
-              LogOutput+="No valid date was found, using ${DATE}.\n"
-            fi
-            EXIFFileModifyDateParserOutput=("${EXIF_OUTPUT_ARRAY[@]}")
-            if [[ "${EXIFFileModifyDateParserOutput[4]}" == "${EXIFCreateDateParserOutput[4]}" ]] && [[ "${EXIFFileModifyDateParserOutput[5]}" == "${EXIFCreateDateParserOutput[5]}" ]] ; then
-              YEAR="${EXIFFileModifyDateParserOutput[0]}"
-              MONTH="${EXIFFileModifyDateParserOutput[1]}"
-              DAY="${EXIFFileModifyDateParserOutput[2]}"
-              HOUR="${EXIFFileModifyDateParserOutput[3]}"
-              MINUTE="${EXIFFileModifyDateParserOutput[4]}"
-              SECOND="${EXIFFileModifyDateParserOutput[5]}"
-              SUBSECOND="000000"
-            else
-              YEAR="${EXIFCreateDateParserOutput[0]}"
-              MONTH="${EXIFCreateDateParserOutput[1]}"
-              DAY="${EXIFCreateDateParserOutput[2]}"
-              HOUR="${EXIFCreateDateParserOutput[3]}"
-              MINUTE="${EXIFCreateDateParserOutput[4]}"
-              SECOND="${EXIFCreateDateParserOutput[5]}"
-              SUBSECOND="000000"
-            fi
-          else
+          
+#          # EXIFFileModifyDateParser is designed primarily for video files, however EXIF FileModifyDate proved to be unreliable due to Google Photos App changes FileModifyDate and affects CreateDate by setting it to GMT if Location/GPS is disabled.
+#          # Perform sanity check on correctly extracted EXIF CreateDate
+#          if [[ "${EXIF_FileModifyDate_OUTPUT}" != -* ]] && [[ "${EXIF_FileModifyDate_OUTPUT}" != 0* ]] ; then
+#            # Good data extracted, pass it to EXIFFileModifyDateParser to extract fields
+#            # from the EXIF info
+#            EXIFFileModifyDateParser "${EXIF_FileModifyDate_OUTPUT}"
+#            # Check the extracted date for validity
+#            if [ "$(IsValidDate "${YEAR}" "${MONTH}" "${DAY}")" == 1 ]  ; then
+#              LogOutput+="A valid date without subseconds was found, using it.\n"
+#            else
+#              DATE="InvalidDate"
+#              LogOutput+="No valid date was found, using ${DATE}.\n"
+#            fi
+#            EXIFFileModifyDateParserOutput=("${EXIF_OUTPUT_ARRAY[@]}")
+#            if [[ "${EXIFFileModifyDateParserOutput[4]}" == "${EXIFCreateDateParserOutput[4]}" ]] && [[ "${EXIFFileModifyDateParserOutput[5]}" == "${EXIFCreateDateParserOutput[5]}" ]] ; then
+#              YEAR="${EXIFFileModifyDateParserOutput[0]}"
+#              MONTH="${EXIFFileModifyDateParserOutput[1]}"
+#              DAY="${EXIFFileModifyDateParserOutput[2]}"
+#              HOUR="${EXIFFileModifyDateParserOutput[3]}"
+#              MINUTE="${EXIFFileModifyDateParserOutput[4]}"
+#              SECOND="${EXIFFileModifyDateParserOutput[5]}"
+#              SUBSECOND="000000"
+#            else
+#              YEAR="${EXIFCreateDateParserOutput[0]}"
+#              MONTH="${EXIFCreateDateParserOutput[1]}"
+#              DAY="${EXIFCreateDateParserOutput[2]}"
+#              HOUR="${EXIFCreateDateParserOutput[3]}"
+#              MINUTE="${EXIFCreateDateParserOutput[4]}"
+#              SECOND="${EXIFCreateDateParserOutput[5]}"
+#              SUBSECOND="000000"
+#            fi
+#          else
             # Assign the array values to the corresponding variables
             YEAR="${EXIFCreateDateParserOutput[0]}"
             MONTH="${EXIFCreateDateParserOutput[1]}"
@@ -1220,7 +1223,7 @@ if [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${FilesFetched} -eq 1 ]] ; then
             MINUTE="${EXIFCreateDateParserOutput[4]}"
             SECOND="${EXIFCreateDateParserOutput[5]}"
             SUBSECOND="000000"
-          fi
+#          fi
           # Perform sanity check on correctly extracted EXIF Model
           if [[ "${EXIF_Model_OUTPUT}" != -* ]] ; then
             # Good data extracted, pass it to EXIFModelParser to extract fields
