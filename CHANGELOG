@@ -1,5 +1,6 @@
 #=======================================================================
 #   Changelog :
+#   20220528 v2.0.0: Neatly-Compressed. Major re-design in logic and processing
 #   20220503 v1.9.2: Neatly-Sorted. Improvements plus CreateDate evaluation changes
 #   20220501 v1.9.1: Neatly-Compressed feature added
 #   20220320 v1.8.3: Neatly-Sorted. Single source file mode added

@@ -193,21 +193,28 @@ An example with YM (/YEAR/MONTH/) folder structure
 &nbsp;&nbsp;--NoModel = filename is formed by placeing Date without Model, example: 20100417-201226-000000.jpg
 
 ## Usage and examples
+### Directory mode
 The command below will search for files at Source Media Location including subfolders (3 levels deep) and **move** files from "upload" to Destination Media Location keeping all files under "archive" with sorting by Year. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
-```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/```  
+```/bin/bash /neatly/neatly-sorted/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/```  
 &nbsp;&nbsp;It would be equivalent to the command below:  
-```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move --timerOFF --crawlON```  
+```/bin/bash /neatly/neatly-sorted/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move --timerOFF --crawlON```  
 
 The command below will search for files in the root of Source Media Location only, i.e. no subfolders, and **copy** files from "upload" to Destination Media Location keeping all files under "archive" with no sorting by Year or Month or Day. File renaming will be done using EXIF metadata only. File extension case will be UnChanged:  
-```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ExT --NoFSAttribute --NOSORT --copy --crawlOFF```  
+```/bin/bash /neatly/neatly-sorted/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ExT --NoFSAttribute --NOSORT --copy --crawlOFF```  
 
 The command below will search for files in the root of Source Media Location only, i.e. no subfolders, and **copy** files from "upload" to Destination Media Location keeping all files under "archive" with sorting by Year and Month. File renaming will be done using EXIF metadata and File System attributes. File extension case will be changed to UPPERCASE:  
-```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --EXT --YM --copy --FSAttribute --crawlOFF```  
+```/bin/bash /neatly/neatly-sorted/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --EXT --YM --copy --FSAttribute --crawlOFF```  
 
 The command below will search for files at Source Media Location including subfolders (3 levels deep) and **move** files from "upload" to Destination Media Location keeping all files under "archive/all" with no file sorting, i.e. the result will be a pile of deduplicated files in the "all" folder. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
-```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --NOSORT```  
+```/bin/bash /neatly/neatly-sorted/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --NOSORT```  
 &nbsp;&nbsp;It would be equivalent to the command below:  
-```/bin/bash /Script-Location/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --NOSORT --move --timerOFF```  
+```/bin/bash /neatly/neatly-sorted/neatly-sorted.sh /Source-Media-Location/upload/ /Destination-Media-Location/archive/ --ext --NoFSAttribute --NOSORT --move --timerOFF```  
+
+### Single file mode
+The command below will process the selected file at Source Media Location and **move** it from "upload" to Destination Media Location keeping the file under "archive" with sorting by Year. File renaming will be done using EXIF metadata only. File extension case will be changed to lowercase:  
+```/bin/bash /neatly/neatly-sorted/neatly-sorted.sh /Source-Media-Location/upload/IMG_20210901_074953.jpg /Destination-Media-Location/archive/```  
+&nbsp;&nbsp;It would be equivalent to the command below:  
+```/bin/bash /neatly/neatly-sorted/neatly-sorted.sh /Source-Media-Location/upload/IMG_20210901_074953.jpg /Destination-Media-Location/archive/ --ext --NoFSAttribute --Y --move --timerOFF --crawlON```  
 
 ## Use cases
 ### Automated file processing with an out-of-support (EOL) NAS QNAP TS-210 or TS-212
@@ -263,7 +270,7 @@ The script run can be event-driven or scheduled. Due to TS-210/TS-212 platform h
 **Apply new crontab:** ```# crontab /etc/config/crontab && /etc/init.d/crond.sh restart```  
 **Verify crontab:** ```# crontab -l``` **Expected outcome:** ```23 23 * * * /opt/bin/bash /apps/neatly-sorted/neatly-sorted.sh /share/Media\ Upload/ /share/Media\ Archive/```  
 
-## Credits, tips and source of inspiration  
+## References, credits, tips and source of inspiration  
 **Photo processing** https://stackoverflow.com/questions/32062159/how-retrieve-the-creation-date-of-photos-with-a-script  
 **Entware** https://github.com/Entware/entware/wiki/Install-on-QNAP-NAS  
 **QNAP Crontab** https://wiki.qnap.com/wiki/Add_items_to_crontab  
