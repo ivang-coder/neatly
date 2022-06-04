@@ -29,6 +29,15 @@ The value of **1650** is selected as Control Spot, i.e. the threshold equivalent
 Neatly-Compressed can work in "file" (single file processing) and "directory" (all files in the specified directory and 3-level deep if selected) modes.  
 "Source" and "Destination" directory need to be selected if the encoded files need to be placed in a separate (Destination) folder. Alternatively, only "Source" directory can be selected where the encoded files will be placed at the same location as the source files.  
 
+### Output
+Upon successful run and completion of Neatly-Compressed, the following is expected:  
+- "monitored-by-neatly-compressed.info" informational file is created at Source
+- "neatly-compressed-<date>.log" log file is created at Source
+- ".Original" folder is created at Source containing the source unchanged files
+- "Metadata" folder is created at Destination containing exiftool and ffprobe metadata files in json format, and crf-type informational files
+- The files that had undergone encoding were renamed with "FFx264" or "FFx265" key words
+- The files that had not required encoding were renamed with "FFx261" key word
+
 ## Compatibility  
 **BASH:** v4+  
 **CentOS/RHEL:** v7, v8  

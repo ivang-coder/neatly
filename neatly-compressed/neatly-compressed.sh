@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Author: Ivan Gladushko
-Version="v2.0.0"
-# Date: 2022-05-28
+Version="v2.0.1"
+# Date: 2022-06-04
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -260,9 +260,9 @@ FFProbe_Attribute_Parser(){
   if [[ ${ControlSpotWeightInBits} == "" ]] ; then FFProbe_Attribute_Parser_Failure=1 ; fi
 }
 
-File_Extension_to_WIP_Renaming(){
-  printf "Renaming source file from ${1} to ${2} to avoid double-processing\n"
-  LogOutput+="Renaming source file from ${1} to ${2} to avoid double-processing\n"
+File_Renaming(){
+  printf "Renaming source file from ${1} to ${2} ${3}\n"
+  LogOutput+="Renaming source file from ${1} to ${2} ${3}\n"
   if ( ! mv "${1}" "${2}" >/dev/null 2>&1 ) ; then
     printf "Something went wrong! ${1} could not be renamed\n"
     LogOutput+="Something went wrong! ${1} could not be renamed\n"
@@ -353,6 +353,7 @@ Media_File_Encoding(){
         LogOutput+="Critical Error! Could not delete ${5} file\n"
         Log_Dumping_and_Exiting "${LogOutput}"
       fi
+      CurrentTime="$(date)"; echo "${CurrentTime}"
       printf "Encoding file by invoking 'ffmpeg -n -hide_banner -i ${1} -c:v ${2} -preset ${3} -crf ${RevisedCRF} -c:a copy ${5} >/dev/null 2>&1'\n"
       LogOutput+="Encoding file by invoking 'ffmpeg -n -hide_banner -i ${1} -c:v ${2} -preset ${3} -crf ${RevisedCRF} -c:a copy ${5} >/dev/null 2>&1'\n"
       if ( ! ffmpeg -n -hide_banner -i "${1}" -c:v "${2}" -preset "${3}" -crf "${RevisedCRF}" -c:a copy "${5}" >/dev/null 2>&1 ) ; then
@@ -360,33 +361,33 @@ Media_File_Encoding(){
         LogOutput+="Something went wrong! ${1} could not be encoded\n"
         Log_Dumping_and_Exiting "${LogOutput}"
       fi
-        EncodedFileSize=$(find "${5}" -exec ls -l {} \; | head -n1 | awk '{print $5}') #Not compatible with Mac: EncodedFileSize=$(find "${5}" -printf "%s"); 
-        if [[ "${EncodedFileSize}" != "" ]] ; then String_to_Integer_Converter "${EncodedFileSize}"; EncodedFileSize=$String_to_Integer_Converter_Output ; fi
-        # Multiplying by 100 to avoid mathematical operations with float
-        CRFStepValuation=$(( 100 * ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
-        # Rounding down if the encoded file is 1.01 to 1.11 times the value of target size
-        if [[ ${CRFStepValuation} -ge 100 ]] && [[ ${CRFStepValuation} -le 111 ]] ; then
-          CRFStep=$(( ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
-        # Rounding up if the encoded file is 1.11 to 1.99 times the value of target size
-        elif [[ ${CRFStepValuation} -gt 111 ]] && [[ ${CRFStepValuation} -lt 200 ]] ; then
-          CRFStep=$(( ( ${EncodedFileSize} / ${EncodedFileSizeTarget} ) + ( ${EncodedFileSize} % ${EncodedFileSizeTarget} > 0 ) ))
-        # Rounding up and multiplying by 1.5 if the encoded file is 2+ times the value of target size. Rounding down the result of multiplication by 1.5
-        elif [[ ${CRFStepValuation} -ge 200 ]] ; then
-          CRFStep=$(( ( ${EncodedFileSize} / ${EncodedFileSizeTarget} ) + ( ${EncodedFileSize} % ${EncodedFileSizeTarget} > 0 ) ))
-          CRFStep=$(( ${CRFStep} * 3 / 2 ))
-        fi
-        EncodedCRF=${RevisedCRF}
-        RevisedCRF=$(( ${RevisedCRF} + ${CRFStep} ))
-        if [[ ${EncodedCRF} -lt ${FFBorderCRF} ]] && [[ ${RevisedCRF} -gt ${FFBorderCRF} ]] ; then
-          printf "CRF was revised with step ${CRFStep} from ${EncodedCRF} to ${RevisedCRF} beyond the factor ${FFBorderCRF}, downgrading the value to match CRF ${FFBorderCRF}\n"
-          LogOutput+="CRF was revised with step ${CRFStep} from ${EncodedCRF} to ${RevisedCRF} beyond the factor ${FFBorderCRF}, downgrading the value to match CRF ${FFBorderCRF}\n"
-          RevisedCRF=${FFBorderCRF}
-        elif [[ ${EncodedCRF} -eq ${FFBorderCRF} ]] && [[ ${RevisedCRF} -gt ${FFBorderCRF} ]] ; then 
-          FFBorderCRFReached="yes"
-          RevisedCRF=${EncodedCRF}
-          printf "Border CRF of ${FFBorderCRF} is reached, exiting the encoding loop\n"
-          LogOutput+="Border CRF of ${FFBorderCRF} is reached, exiting the encoding loop\n"
-        fi
+      EncodedFileSize=$(find "${5}" -exec ls -l {} \; | head -n1 | awk '{print $5}') #Not compatible with Mac: EncodedFileSize=$(find "${5}" -printf "%s"); 
+      if [[ "${EncodedFileSize}" != "" ]] ; then String_to_Integer_Converter "${EncodedFileSize}"; EncodedFileSize=$String_to_Integer_Converter_Output ; fi
+      # Multiplying by 100 to avoid mathematical operations with float
+      CRFStepValuation=$(( 100 * ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
+      # Rounding down if the encoded file is 1.01 to 1.11 times the value of target size
+      if [[ ${CRFStepValuation} -ge 100 ]] && [[ ${CRFStepValuation} -le 111 ]] ; then
+        CRFStep=$(( ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
+      # Rounding up if the encoded file is 1.11 to 1.99 times the value of target size
+      elif [[ ${CRFStepValuation} -gt 111 ]] && [[ ${CRFStepValuation} -lt 200 ]] ; then
+        CRFStep=$(( ( ${EncodedFileSize} / ${EncodedFileSizeTarget} ) + ( ${EncodedFileSize} % ${EncodedFileSizeTarget} > 0 ) ))
+      # Rounding up and multiplying by 1.5 if the encoded file is 2+ times the value of target size. Rounding down the result of multiplication by 1.5
+      elif [[ ${CRFStepValuation} -ge 200 ]] ; then
+        CRFStep=$(( ( ${EncodedFileSize} / ${EncodedFileSizeTarget} ) + ( ${EncodedFileSize} % ${EncodedFileSizeTarget} > 0 ) ))
+        CRFStep=$(( ${CRFStep} * 3 / 2 ))
+      fi
+      EncodedCRF=${RevisedCRF}
+      RevisedCRF=$(( ${RevisedCRF} + ${CRFStep} ))
+      if [[ ${EncodedCRF} -lt ${FFBorderCRF} ]] && [[ ${RevisedCRF} -gt ${FFBorderCRF} ]] ; then
+        printf "CRF was revised with step ${CRFStep} from ${EncodedCRF} to ${RevisedCRF} beyond the factor ${FFBorderCRF}, downgrading the value to match CRF ${FFBorderCRF}\n"
+        LogOutput+="CRF was revised with step ${CRFStep} from ${EncodedCRF} to ${RevisedCRF} beyond the factor ${FFBorderCRF}, downgrading the value to match CRF ${FFBorderCRF}\n"
+        RevisedCRF=${FFBorderCRF}
+      elif [[ ${EncodedCRF} -eq ${FFBorderCRF} ]] && [[ ${RevisedCRF} -gt ${FFBorderCRF} ]] ; then 
+        FFBorderCRFReached="yes"
+        RevisedCRF=${EncodedCRF}
+        printf "Border CRF of ${FFBorderCRF} is reached, exiting the encoding loop\n"
+        LogOutput+="Border CRF of ${FFBorderCRF} is reached, exiting the encoding loop\n"
+      fi
     done
     if [[ ${FFBorderCRFReached} == "yes" ]] ; then
       printf "Border CRF of ${FFBorderCRF} has been reached. Keeping encoded CRF=${RevisedCRF} ${5} with file size ${EncodedFileSize} bytes, the target was ${EncodedFileSizeTarget} bytes, ${6}%% of ${1} source file with ${SourceFileSize} bytes. Proceeding to next step\n"
@@ -534,6 +535,7 @@ WIP_Directory_Cleanup(){
 # Process_Conflict_Avoidance <process_name> <max_count_threshold> <grace_period_in_seconds>
 Process_Conflict_Avoidance "${InstanceNameBase}.sh" "2" "60"
 
+LogOutput+="neatly-compressed version: ${Version}\n"
 # Checking for BASH version, v4+ is required
 if [[ "${BASH_VERSINFO}" < 4 ]]; then
   printf "Prerequisite Critical Error! Non-supported BASH version ${BASH_VERSINFO} is identified. BASH version 4+ is required. Exiting now.\n"
@@ -875,8 +877,8 @@ HostName=$(hostname)
 HostName="${HostName//-/}"; HostName="${HostName//_/}"; HostName="${HostName//./}"
 # Forming log filename name in <instance>-<hostname>-YYYYMMDD.log format
 LogFileName="${InstanceNameBase}-${LogFileDate}.log"
-# Forming Work-In-Progress directory name in WIP-YYYYMMDD-HHmmss format
-WIPDirectoryName="WIP-${WIPDirectoryDate}"
+# Forming Work-In-Progress directory name in NeatlyWIP-YYYYMMDD-HHmmss format
+WIPDirectoryName="NeatlyWIP-${WIPDirectoryDate}"
 # Defining temp folder and Forming WIP directory
 WIPTempDirectory="/tmp"
 WIPDirectoryPath="${WIPTempDirectory}/${WIPDirectoryName}"
@@ -984,7 +986,7 @@ if [[ "${SourceType}" == "file" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${Fil
     if [[ ${FFProbe_Attribute_Parser_Failure} -eq 1 ]] ; then
       printf "Could not retrieve ffprobe attributes from media file ${SourcePath}/${SourceFileBasename}. Exiting now.\n"
       LogOutput+="Could not retrieve ffprobe attributes from media file ${SourcePath}/${SourceFileBasename}. Exiting now.\n"
-      printf "######### file operation complete ############\n"
+      printf "######### file operation complete ############\n"; CurrentTime="$(date)"; echo "${CurrentTime}"
       LogOutput+="######### file operation complete ############\n"
       Log_Dumping_and_Exiting "${LogOutput}"
     elif ([ ${FFProbe_Attribute_Parser_Failure} -eq 0 ] && [ ${ControlSpotWeightInBits} -gt ${ControlSpotWeightInBitsThreshold} ]) ; then
@@ -993,13 +995,13 @@ if [[ "${SourceType}" == "file" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${Fil
 
       Work_In_Progress_Preparation "${WIPDirectoryPath}" "${SourcePathBasename}"
 
-      Exiftool_Metadata_to_JSON_Exporting "${SourcePath}/${SourceFileBasename}" "${DestinationPath}/${MetadataSubfolder}/${SourceFileName}_exiftool.json"
+      File_Renaming "${SourcePath}/${SourceFileBasename}" "${SourcePath}/${SourceFileBasename}.neatly" "to avoid double-processing."
 
-      FFProbe_Metadata_to_JSON_Exporting "${SourcePath}/${SourceFileBasename}" "${DestinationPath}/${MetadataSubfolder}/${SourceFileName}_ffprobe.json"
+      Exiftool_Metadata_to_JSON_Exporting "${SourcePath}/${SourceFileBasename}.neatly" "${DestinationPath}/${MetadataSubfolder}/${SourceFileName}_exiftool.json"
 
-      File_Extension_to_WIP_Renaming "${SourcePath}/${SourceFileBasename}" "${SourcePath}/${SourceFileBasename}.wip"
+      FFProbe_Metadata_to_JSON_Exporting "${SourcePath}/${SourceFileBasename}.neatly" "${DestinationPath}/${MetadataSubfolder}/${SourceFileName}_ffprobe.json"
 
-      Source_to_WIP_Transfer "${SourcePath}" "${SourceFileBasename}.wip" "${WIPDirectoryPath}" "${SourcePathBasename}" "${SourceFileBasename}"
+      Source_to_WIP_Transfer "${SourcePath}" "${SourceFileBasename}.neatly" "${WIPDirectoryPath}" "${SourcePathBasename}" "${SourceFileBasename}"
 
       # Substituting MODEL with FFx264/FFx265, or adding FFx264/FFx265
       if [[ ${SourceFileName} == *CAMERA* ]] ; then
@@ -1010,25 +1012,36 @@ if [[ "${SourceType}" == "file" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [[ ${Fil
 
       Media_File_Encoding "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileBasename}" "${FFEncoder}" "${FFPreset}" ${FFDesiredCRF} "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}" ${FileSizeTarget}
 
-      Metadata_Copying "${SourcePath}/${SourceFileBasename}.wip" "${FFModel}" "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}"
+      Metadata_Copying "${SourcePath}/${SourceFileBasename}.neatly" "${FFModel}" "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}"
 
-      FS_Attributes_Copying "${SourcePath}/${SourceFileBasename}.wip" "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}"
+      FS_Attributes_Copying "${SourcePath}/${SourceFileBasename}.neatly" "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}"
 
       Encoded_File_to_Destination_Transfer "${WIPDirectoryPath}/${SourcePathBasename}" "${SourceFileNameEncoded}.${SourceFileExtension}" "${DestinationPath}"
 
       Encoded_Info_File_Generating "${DestinationPath}/${MetadataSubfolder}" "${SourceFileNameEncoded}.crf${EncodedCRF}"
 
-      Original_File_to_Originals_Transfer "${SourcePath}/${SourceFileBasename}.wip" "${SourcePath}/${OriginalVideosSubfolder}/${SourceFileBasename}"
+      Original_File_to_Originals_Transfer "${SourcePath}/${SourceFileBasename}.neatly" "${SourcePath}/${OriginalVideosSubfolder}/${SourceFileBasename}"
 
       WIP_Subdirectory_Cleanup "${WIPDirectoryPath}/${SourcePathBasename}"
 
-      printf "######### file operation complete ############\n"
+      printf "######### file operation complete ############\n"; CurrentTime="$(date)"; echo "${CurrentTime}"
       LogOutput+="######### file operation complete ############\n"
       Log_Dumping "${LogOutput}"
     elif ([ ${FFProbe_Attribute_Parser_Failure} -eq 0 ] && [ ${ControlSpotWeightInBits} -le ${ControlSpotWeightInBitsThreshold} ]) ; then
-      printf "Media file ${SourcePath}/${SourceFileBasename} Control Spot: ${ControlSpotWeightInBits} bits, Control Spot Threshold: ${ControlSpotWeightInBitsThreshold} bits, no processing is required. Exiting now.\n"
-      LogOutput+="Media file ${SourcePath}/${SourceFileBasename} Control Spot: ${ControlSpotWeightInBits} bits, Control Spot Threshold: ${ControlSpotWeightInBitsThreshold} bits, no processing is required. Exiting now.\n"
-      printf "######### file operation complete ############\n"
+      FFModelNoProcessingRequired="FFx261"
+      printf "Media file ${SourcePath}/${SourceFileBasename} Control Spot: ${ControlSpotWeightInBits} bits, Control Spot Threshold: ${ControlSpotWeightInBitsThreshold} bits, no processing is required. Proceeding to the next step.\n"
+      LogOutput+="Media file ${SourcePath}/${SourceFileBasename} Control Spot: ${ControlSpotWeightInBits} bits, Control Spot Threshold: ${ControlSpotWeightInBitsThreshold} bits, no processing is required. Proceeding to the next step.\n"
+
+      # Substituting MODEL with FFx261, or adding FFx261
+      if [[ ${SourceFileName} == *CAMERA* ]] ; then
+        SourceFileNameNoProcessingRequired="${SourceFileName//CAMERA/${FFModelNoProcessingRequired}}"
+      else
+        SourceFileNameNoProcessingRequired="${SourceFileName}-${FFModelNoProcessingRequired}"
+      fi
+
+      File_Renaming "${SourcePath}/${SourceFileBasename}" "${SourcePath}/${SourceFileNameNoProcessingRequired}.${SourceFileExtension}" "to avoid future processing."
+
+      printf "######### file operation complete ############\n"; CurrentTime="$(date)"; echo "${CurrentTime}"
       LogOutput+="######### file operation complete ############\n"
       Log_Dumping_and_Exiting "${LogOutput}"
     fi
@@ -1075,7 +1088,7 @@ elif [[ "${SourceType}" == "directory" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [
         if [[ ${FFProbe_Attribute_Parser_Failure} -eq 1 ]] ; then
           printf "Could not retrieve ffprobe attributes from media file ${SourceFileDirectoryPath}/${SourceFileBasename}. Proceeding to the next file.\n"
           LogOutput+="Could not retrieve ffprobe attributes from media file ${SourceFileDirectoryPath}/${SourceFileBasename}. Proceeding to the next file.\n"
-          printf "######### file operation complete ############\n"
+          printf "######### file operation complete ############\n"; CurrentTime="$(date)"; echo "${CurrentTime}"
           LogOutput+="######### file operation complete ############\n"
           Log_Dumping "${LogOutput}"
         elif ([ ${FFProbe_Attribute_Parser_Failure} -eq 0 ] && [ ${ControlSpotWeightInBits} -gt ${ControlSpotWeightInBitsThreshold} ]) ; then
@@ -1084,13 +1097,13 @@ elif [[ "${SourceType}" == "directory" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [
 
           Work_In_Progress_Preparation "${WIPDirectoryPath}" "${SourcePathBasename}"
 
-          Exiftool_Metadata_to_JSON_Exporting "${SourceFileDirectoryPath}/${SourceFileBasename}" "${DestinationPath}/${MetadataSubfolder}/${SourceFileName}_exiftool.json"
+          File_Renaming "${SourceFileDirectoryPath}/${SourceFileBasename}" "${SourceFileDirectoryPath}/${SourceFileBasename}.neatly" "to avoid double-processing."
 
-          FFProbe_Metadata_to_JSON_Exporting "${SourceFileDirectoryPath}/${SourceFileBasename}" "${DestinationPath}/${MetadataSubfolder}/${SourceFileName}_ffprobe.json"
+          Exiftool_Metadata_to_JSON_Exporting "${SourceFileDirectoryPath}/${SourceFileBasename}.neatly" "${DestinationPath}/${MetadataSubfolder}/${SourceFileName}_exiftool.json"
 
-          File_Extension_to_WIP_Renaming "${SourceFileDirectoryPath}/${SourceFileBasename}" "${SourceFileDirectoryPath}/${SourceFileBasename}.wip"
+          FFProbe_Metadata_to_JSON_Exporting "${SourceFileDirectoryPath}/${SourceFileBasename}.neatly" "${DestinationPath}/${MetadataSubfolder}/${SourceFileName}_ffprobe.json"
 
-          Source_to_WIP_Transfer "${SourceFileDirectoryPath}" "${SourceFileBasename}.wip" "${WIPDirectoryPath}" "${SourcePathBasename}" "${SourceFileBasename}"
+          Source_to_WIP_Transfer "${SourceFileDirectoryPath}" "${SourceFileBasename}.neatly" "${WIPDirectoryPath}" "${SourcePathBasename}" "${SourceFileBasename}"
 
           # Substituting MODEL with FFx264/FFx265, or adding FFx264/FFx265
           if [[ ${SourceFileName} == *CAMERA* ]] ; then
@@ -1101,9 +1114,9 @@ elif [[ "${SourceType}" == "directory" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [
 
           Media_File_Encoding "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileBasename}" "${FFEncoder}" "${FFPreset}" ${FFDesiredCRF} "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}" ${FileSizeTarget}
 
-          Metadata_Copying "${SourceFileDirectoryPath}/${SourceFileBasename}.wip" "${FFModel}" "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}"
+          Metadata_Copying "${SourceFileDirectoryPath}/${SourceFileBasename}.neatly" "${FFModel}" "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}"
 
-          FS_Attributes_Copying "${SourceFileDirectoryPath}/${SourceFileBasename}.wip" "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}"
+          FS_Attributes_Copying "${SourceFileDirectoryPath}/${SourceFileBasename}.neatly" "${WIPDirectoryPath}/${SourcePathBasename}/${SourceFileNameEncoded}.${SourceFileExtension}"
 
           if [[ ${DestinationPathSpecified} -eq 1 ]] ; then
             Encoded_File_to_Destination_Transfer "${WIPDirectoryPath}/${SourcePathBasename}" "${SourceFileNameEncoded}.${SourceFileExtension}" "${DestinationPath}"
@@ -1113,17 +1126,28 @@ elif [[ "${SourceType}" == "directory" ]] && [[ ${PrerequisitesOK} -eq 1 ]] && [
 
           Encoded_Info_File_Generating "${DestinationPath}/${MetadataSubfolder}" "${SourceFileNameEncoded}.crf${EncodedCRF}"
 
-          Original_File_to_Originals_Transfer "${SourceFileDirectoryPath}/${SourceFileBasename}.wip" "${SourcePath}/${OriginalVideosSubfolder}/${SourceFileBasename}"
+          Original_File_to_Originals_Transfer "${SourceFileDirectoryPath}/${SourceFileBasename}.neatly" "${SourcePath}/${OriginalVideosSubfolder}/${SourceFileBasename}"
 
           WIP_Subdirectory_Cleanup "${WIPDirectoryPath}/${SourcePathBasename}"
 
-          printf "######### file operation complete ############\n"
+          printf "######### file operation complete ############\n"; CurrentTime="$(date)"; echo "${CurrentTime}"
           LogOutput+="######### file operation complete ############\n"
           Log_Dumping "${LogOutput}"
         elif ([ ${FFProbe_Attribute_Parser_Failure} -eq 0 ] && [ ${ControlSpotWeightInBits} -le ${ControlSpotWeightInBitsThreshold} ]) ; then
-          printf "Media file ${SourceFileDirectoryPath}/${SourceFileBasename} Control Spot: ${ControlSpotWeightInBits} bits, Control Spot Threshold: ${ControlSpotWeightInBitsThreshold} bits, no processing is required. Proceeding to the next file.\n"
-          LogOutput+="Media file ${SourceFileDirectoryPath}/${SourceFileBasename} Control Spot: ${ControlSpotWeightInBits} bits, Control Spot Threshold: ${ControlSpotWeightInBitsThreshold} bits, no processing is required. Proceeding to the next file.\n"
-          printf "######### file operation complete ############\n"
+          FFModelNoProcessingRequired="FFx261"
+          printf "Media file ${SourceFileDirectoryPath}/${SourceFileBasename} Control Spot: ${ControlSpotWeightInBits} bits, Control Spot Threshold: ${ControlSpotWeightInBitsThreshold} bits, no processing is required. Proceeding to the next step.\n"
+          LogOutput+="Media file ${SourceFileDirectoryPath}/${SourceFileBasename} Control Spot: ${ControlSpotWeightInBits} bits, Control Spot Threshold: ${ControlSpotWeightInBitsThreshold} bits, no processing is required. Proceeding to the next step.\n"
+          
+          # Substituting MODEL with FFx261, or adding FFx261
+          if [[ ${SourceFileName} == *CAMERA* ]] ; then
+            SourceFileNameNoProcessingRequired="${SourceFileName//CAMERA/${FFModelNoProcessingRequired}}"
+          else
+            SourceFileNameNoProcessingRequired="${SourceFileName}-${FFModelNoProcessingRequired}"
+          fi
+
+          File_Renaming "${SourceFileDirectoryPath}/${SourceFileBasename}" "${SourceFileDirectoryPath}/${SourceFileNameNoProcessingRequired}.${SourceFileExtension}" "to avoid future processing."
+
+          printf "######### file operation complete ############\n"; CurrentTime="$(date)"; echo "${CurrentTime}"
           LogOutput+="######### file operation complete ############\n"
           Log_Dumping "${LogOutput}"
         fi
