@@ -1,5 +1,6 @@
 #=======================================================================
 #   Changelog :
+#   20220605 v2.0.3: Neatly-Compressed. Bugs with quality evaluation fixed
 #   20220605 v2.0.2: Neatly-Compressed. Encoding quality evaluation refactored
 #   20220604 v2.0.1: Neatly-Compressed. Improvements, bug fixing, readme changes
 #   20220528 v2.0.0: Neatly-Compressed. Major re-design in logic and processing

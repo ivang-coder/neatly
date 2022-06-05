@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Author: Ivan Gladushko
-Version="v2.0.2"
+Version="v2.0.3"
 # Date: 2022-06-05
 
 # Knowledge Base:
@@ -332,7 +332,7 @@ Media_File_Encoding(){
     # Multiplying by 100 to avoid mathematical operations with floating numbers
     CRFStepEvaluation=$(( 100 * ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
     # Subtracting 100 to get the part
-    CRFStepEvaluation=$(( ${CRFStepEvaluation} - 100 ))
+    CRFStepEvaluation=$(( ${CRFStepEvaluation} - 100 )); if [[ ${CRFStepEvaluation} -eq 0 ]] ; then CRFStepEvaluation=1 ; fi
     # Setting EncodedFileSize-to-EncodedFileSizeTarget ratio
     TargetRatio=27
     # Rounding up the CRF step with each 27% of ratio equals to CRF step of 1
@@ -365,7 +365,7 @@ Media_File_Encoding(){
       # Multiplying by 100 to avoid mathematical operations with floating numbers
       CRFStepEvaluation=$(( 100 * ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
       # Subtracting 100 to get the part
-      CRFStepEvaluation=$(( ${CRFStepEvaluation} - 100 ))
+      CRFStepEvaluation=$(( ${CRFStepEvaluation} - 100 )); if [[ ${CRFStepEvaluation} -eq 0 ]] ; then CRFStepEvaluation=1 ; fi
       # Setting EncodedFileSize-to-EncodedFileSizeTarget ratio
       TargetRatio=27
       # Rounding up the CRF step with each 27% of ratio equals to CRF step of 1
