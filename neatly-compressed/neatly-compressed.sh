@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Author: Ivan Gladushko
-Version="v2.0.1"
-# Date: 2022-06-04
+Version="v2.0.2"
+# Date: 2022-06-05
 
 # Knowledge Base:
 #   Bash functions, unlike functions in most programming languages do not allow you to return values to the caller, i.e. use another variable to keep the results of the function. Alternatively, use "echo", i.e. echo "1" to return the result or boolian value
@@ -329,15 +329,14 @@ Media_File_Encoding(){
     printf "Encoded CRF=${EncodedCRF} ${5} with file size ${EncodedFileSize} bytes reached the target ${EncodedFileSizeTarget} bytes, ${6}%% of ${1} source file with ${SourceFileSize} bytes. Proceeding to next step\n"
     LogOutput+="Encoded CRF=${EncodedCRF} ${5} with file size ${EncodedFileSize} bytes reached the target ${EncodedFileSizeTarget} bytes, ${6}%% of ${1} source file with ${SourceFileSize} bytes. Proceeding to next step\n"
   else
-    CRFStepValuation=$(( 100 * ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
-    if [[ ${CRFStepValuation} -le 111 ]] ; then
-      CRFStep=$(( ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
-    elif [[ ${CRFStepValuation} -gt 111 ]] && [[ ${CRFStepValuation} -lt 200 ]] ; then
-      CRFStep=$(( ( ${EncodedFileSize} / ${EncodedFileSizeTarget} ) + ( ${EncodedFileSize} % ${EncodedFileSizeTarget} > 0 ) ))
-    elif [[ ${CRFStepValuation} -ge 200 ]] ; then
-      CRFStep=$(( ( ${EncodedFileSize} / ${EncodedFileSizeTarget} ) + ( ${EncodedFileSize} % ${EncodedFileSizeTarget} > 0 ) ))
-      CRFStep=$(( ${CRFStep} * 3 / 2 ))
-    fi
+    # Multiplying by 100 to avoid mathematical operations with floating numbers
+    CRFStepEvaluation=$(( 100 * ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
+    # Subtracting 100 to get the part
+    CRFStepEvaluation=$(( ${CRFStepEvaluation} - 100 ))
+    # Setting EncodedFileSize-to-EncodedFileSizeTarget ratio
+    TargetRatio=27
+    # Rounding up the CRF step with each 27% of ratio equals to CRF step of 1
+    CRFStep=$(( ( ${CRFStepEvaluation} / ${TargetRatio} ) + ( ${CRFStepEvaluation} % ${TargetRatio} > 0 ) ))
     EncodedCRF=${RevisedCRF}
     RevisedCRF=$(( ${RevisedCRF} + ${CRFStep} ))
     if [[ ${RevisedCRF} -gt ${FFBorderCRF} ]] ; then
@@ -363,19 +362,14 @@ Media_File_Encoding(){
       fi
       EncodedFileSize=$(find "${5}" -exec ls -l {} \; | head -n1 | awk '{print $5}') #Not compatible with Mac: EncodedFileSize=$(find "${5}" -printf "%s"); 
       if [[ "${EncodedFileSize}" != "" ]] ; then String_to_Integer_Converter "${EncodedFileSize}"; EncodedFileSize=$String_to_Integer_Converter_Output ; fi
-      # Multiplying by 100 to avoid mathematical operations with float
-      CRFStepValuation=$(( 100 * ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
-      # Rounding down if the encoded file is 1.01 to 1.11 times the value of target size
-      if [[ ${CRFStepValuation} -ge 100 ]] && [[ ${CRFStepValuation} -le 111 ]] ; then
-        CRFStep=$(( ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
-      # Rounding up if the encoded file is 1.11 to 1.99 times the value of target size
-      elif [[ ${CRFStepValuation} -gt 111 ]] && [[ ${CRFStepValuation} -lt 200 ]] ; then
-        CRFStep=$(( ( ${EncodedFileSize} / ${EncodedFileSizeTarget} ) + ( ${EncodedFileSize} % ${EncodedFileSizeTarget} > 0 ) ))
-      # Rounding up and multiplying by 1.5 if the encoded file is 2+ times the value of target size. Rounding down the result of multiplication by 1.5
-      elif [[ ${CRFStepValuation} -ge 200 ]] ; then
-        CRFStep=$(( ( ${EncodedFileSize} / ${EncodedFileSizeTarget} ) + ( ${EncodedFileSize} % ${EncodedFileSizeTarget} > 0 ) ))
-        CRFStep=$(( ${CRFStep} * 3 / 2 ))
-      fi
+      # Multiplying by 100 to avoid mathematical operations with floating numbers
+      CRFStepEvaluation=$(( 100 * ${EncodedFileSize} / ${EncodedFileSizeTarget} ))
+      # Subtracting 100 to get the part
+      CRFStepEvaluation=$(( ${CRFStepEvaluation} - 100 ))
+      # Setting EncodedFileSize-to-EncodedFileSizeTarget ratio
+      TargetRatio=27
+      # Rounding up the CRF step with each 27% of ratio equals to CRF step of 1
+      CRFStep=$(( ( ${CRFStepEvaluation} / ${TargetRatio} ) + ( ${CRFStepEvaluation} % ${TargetRatio} > 0 ) ))
       EncodedCRF=${RevisedCRF}
       RevisedCRF=$(( ${RevisedCRF} + ${CRFStep} ))
       if [[ ${EncodedCRF} -lt ${FFBorderCRF} ]] && [[ ${RevisedCRF} -gt ${FFBorderCRF} ]] ; then
